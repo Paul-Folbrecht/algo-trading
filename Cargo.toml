@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = "1.0.201"
-#tokio = { version = "1.37.0", features = ["full"] }
+reqwest = { version = "*", features = ["json", "blocking"] }
+serde = { version = "1.0.201", features = ["derive"] }
+serde_json = "1.0.117"
 tungstenite = { version = "0.21.0", features = ["native-tls"] }
