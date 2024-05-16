@@ -1,17 +1,14 @@
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
-//use reqwest::{Client, Method, Response};
 use serde::Deserialize;
 use tungstenite::{connect, Message};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct AuthResponse {
     stream: Stream,
 }
 
-// {"stream":{"url":"https:\/\/stream.tradier.com\/v1\/markets\/events","sessionid":"d0c9b9fc-371f-4a89-bbb5-a02f88082ab8"}}%
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
 struct Stream {
-    url: String,
     sessionid: String,
 }
 
@@ -30,14 +27,7 @@ fn main() {
     let session_id = &response.stream.sessionid;
 
     match connect("wss://ws.tradier.com/v1/markets/events") {
-        Ok((mut socket, response)) => {
-            //            let _body = String::from_utf8(response.into_body().unwrap()).unwrap();
-            println!("Response HTTP code: {}", response.status());
-            println!("Response contains the following headers:");
-            for (ref header, _value) in response.headers() {
-                println!("* {}", header);
-            }
-
+        Ok((mut socket, _)) => {
             let message = format!(
                 "{{\"symbols\": [\"SPY\"], \"sessionid\": \"{}\", \"linebreak\": true}}",
                 session_id
