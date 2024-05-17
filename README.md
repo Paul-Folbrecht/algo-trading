@@ -9,6 +9,7 @@
   - Services will be constructed based on the config, hierarchal including dependencies
     - Service parameters (to other services) must be wrapped in Arc
     - And they must be thread-safe - or use channels
+    - Each service will get its config as a map
   - Services will be started as needed (MarketData init, TradingService loop...)
 
 ## Basic Architecture

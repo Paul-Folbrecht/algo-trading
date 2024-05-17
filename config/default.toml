@@ -1,0 +1,3 @@
+[strategy]
+strategy = "mean-reversion"
+strategy_params = ["SPY", "AAPL"]

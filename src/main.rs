@@ -1,6 +1,10 @@
+use config::AppConfig;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
 use tungstenite::{connect, Message};
+
+mod config;
+mod market_data;
 
 #[derive(Deserialize)]
 struct AuthResponse {
@@ -23,6 +27,10 @@ fn authenticate(access_token: &str) -> reqwest::Result<AuthResponse> {
 }
 
 fn main() {
+    let config = AppConfig::new();
+    println!("{:?}", config);
+    let symbols = serde_json::to_string(&config.unwrap().strategy.strategy_params).unwrap();
+
     let args: Vec<String> = std::env::args().collect();
     let access_token = &args[1];
     let response = authenticate(access_token).unwrap();
@@ -31,7 +39,8 @@ fn main() {
     match connect("wss://ws.tradier.com/v1/markets/events") {
         Ok((mut socket, _)) => {
             let message = format!(
-                "{{\"symbols\": [\"SPY\"], \"sessionid\": \"{}\", \"filter\": [\"quote\"], \"linebreak\": true}}",
+                "{{\"symbols\": {}, \"sessionid\": \"{}\", \"filter\": [\"quote\"], \"linebreak\": true}}",
+                symbols,
                 session_id
             );
             socket.send(Message::Text(message)).unwrap();
