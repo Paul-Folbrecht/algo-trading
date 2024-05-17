@@ -12,10 +12,10 @@ struct Stream {
     sessionid: String,
 }
 
-fn authenticate() -> reqwest::Result<AuthResponse> {
+fn authenticate(access_token: &str) -> reqwest::Result<AuthResponse> {
     reqwest::blocking::Client::new()
         .post("https://api.tradier.com/v1/markets/events/session")
-        .header(AUTHORIZATION, "Bearer RX0IJTkJdbCoS2L5km6RiClQuK9X")
+        .header(AUTHORIZATION, format!("Bearer {}", access_token))
         .header(ACCEPT, "application/json")
         .header(CONTENT_LENGTH, "0")
         .send()?
@@ -23,13 +23,15 @@ fn authenticate() -> reqwest::Result<AuthResponse> {
 }
 
 fn main() {
-    let response = authenticate().unwrap();
+    let args: Vec<String> = std::env::args().collect();
+    let access_token = &args[1];
+    let response = authenticate(access_token).unwrap();
     let session_id = &response.stream.sessionid;
 
     match connect("wss://ws.tradier.com/v1/markets/events") {
         Ok((mut socket, _)) => {
             let message = format!(
-                "{{\"symbols\": [\"SPY\"], \"sessionid\": \"{}\", \"linebreak\": true}}",
+                "{{\"symbols\": [\"SPY\"], \"sessionid\": \"{}\", \"filter\": [\"quote\"], \"linebreak\": true}}",
                 session_id
             );
             socket.send(Message::Text(message)).unwrap();
