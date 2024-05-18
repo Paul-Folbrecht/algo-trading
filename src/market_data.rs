@@ -1,20 +1,15 @@
 use crossbeam_channel::{unbounded, Receiver, Sender};
-//use mpsc::{Receiver, Sender};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
-use std::thread::ScopedJoinHandle;
-use std::{sync::mpsc, thread::spawn};
+use std::thread::JoinHandle;
 use tungstenite::{connect, Message};
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
 
 pub trait MarketDataService {
-    fn init(
-        &mut self,
-        symbols: Vec<String>,
-    ) -> Result<std::thread::ScopedJoinHandle<'static, String>, String>;
+    fn init(&mut self, symbols: Vec<String>) -> Result<JoinHandle<String>, String>;
     fn subscribe(&mut self) -> Result<Receiver<String>, String>;
     fn unsubscribe(&mut self, subscriber: Receiver<String>) -> Result<(), String>;
 }
@@ -39,10 +34,7 @@ struct Stream {
 impl MarketData {}
 
 impl MarketDataService for MarketData {
-    fn init(
-        &mut self,
-        symbols: Vec<String>,
-    ) -> Result<std::thread::ScopedJoinHandle<'static, String>, String> {
+    fn init(&mut self, symbols: Vec<String>) -> Result<JoinHandle<String>, String> {
         println!("self.access_token: {}", self.access_token);
         let response = authenticate(&self.access_token).unwrap();
         let session_id = &response.stream.sessionid;
@@ -59,17 +51,25 @@ impl MarketDataService for MarketData {
                 // @todo Need to hang on to the socket?
                 //self.socket = Some(socket);
 
-                let handle: ScopedJoinHandle<String> = std::thread::scope(|s| {
-                    s.spawn(move || {
-                        loop {
-                            let msg = socket.read().expect("Error reading message");
-                            println!("Received: {}", msg);
-                            for subscriber in self.subscribers.lock().unwrap().iter() {
-                                subscriber.0.send(msg.to_string()).unwrap();
-                            }
-                            // Send to subscribers
-                        }
-                    })
+                let subscribers = self.subscribers.clone();
+                // let handle: ScopedJoinHandle<String> = std::thread::scope(|s| {
+                //     s.spawn(move || {
+                //         loop {
+                //             let msg = socket.read().expect("Error reading message");
+                //             println!("Received: {}", msg);
+                //             for subscriber in subscribers.lock().unwrap().iter() {
+                //                 subscriber.0.send(msg.to_string()).unwrap();
+                //             }
+                //             // Send to subscribers
+                //         }
+                //     })
+                // });
+                let handle: JoinHandle<String> = std::thread::spawn(move || loop {
+                    let msg = socket.read().expect("Error reading message");
+                    println!("Received: {}", msg);
+                    for subscriber in subscribers.lock().unwrap().iter() {
+                        subscriber.0.send(msg.to_string()).unwrap();
+                    }
                 });
                 Ok(handle)
                 //socket.close(None);
