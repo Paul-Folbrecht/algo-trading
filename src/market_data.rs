@@ -1,18 +1,29 @@
+use crossbeam_channel::{unbounded, Receiver, Sender};
+//use mpsc::{Receiver, Sender};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
+use std::collections::HashSet;
 use std::net::TcpStream;
+use std::sync::{Arc, Mutex};
+use std::thread::ScopedJoinHandle;
+use std::{sync::mpsc, thread::spawn};
 use tungstenite::{connect, Message};
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
 
 pub trait MarketDataService {
-    fn init(&mut self, symbols: Vec<String>) -> Result<(), String>;
-    fn subscribe(&mut self) -> Result<(), String>;
-    fn unsubscribe(&mut self) -> Result<(), String>;
+    fn init(
+        &mut self,
+        symbols: Vec<String>,
+    ) -> Result<std::thread::ScopedJoinHandle<'static, String>, String>;
+    fn subscribe(&mut self) -> Result<Receiver<String>, String>;
+    fn unsubscribe(&mut self, subscriber: Receiver<String>) -> Result<(), String>;
 }
 
 struct MarketData {
     access_token: String,
     socket: Option<WebSocket<MaybeTlsStream<TcpStream>>>,
+    symbols: HashSet<String>,
+    subscribers: Arc<Mutex<Vec<(Sender<String>, Receiver<String>)>>>,
 }
 
 #[derive(Deserialize)]
@@ -28,7 +39,11 @@ struct Stream {
 impl MarketData {}
 
 impl MarketDataService for MarketData {
-    fn init(&mut self, symbols: Vec<String>) -> Result<(), String> {
+    fn init(
+        &mut self,
+        symbols: Vec<String>,
+    ) -> Result<std::thread::ScopedJoinHandle<'static, String>, String> {
+        println!("self.access_token: {}", self.access_token);
         let response = authenticate(&self.access_token).unwrap();
         let session_id = &response.stream.sessionid;
         let symbols_json = serde_json::to_string(&symbols).unwrap();
@@ -41,17 +56,22 @@ impl MarketDataService for MarketData {
                     session_id
                 );
                 socket.send(Message::Text(message)).unwrap();
-                self.socket = Some(socket);
-                Ok(())
+                // @todo Need to hang on to the socket?
+                //self.socket = Some(socket);
 
-                // #todo Loop must be moved to a thread! Otherwise, it will block the main thread.
-                // #todo The loop must be stopped when the last user unsubscribes.
-                // loop {
-                //     let msg = socket.read().expect("Error reading message");
-                //     println!("Received: {}", msg);
-                //     // Send to subscribers
-                //     // Break the loop if no subscribers? In Rust you let threads terminate rather than stop them...
-                // }
+                let handle: ScopedJoinHandle<String> = std::thread::scope(|s| {
+                    s.spawn(move || {
+                        loop {
+                            let msg = socket.read().expect("Error reading message");
+                            println!("Received: {}", msg);
+                            for subscriber in self.subscribers.lock().unwrap().iter() {
+                                subscriber.0.send(msg.to_string()).unwrap();
+                            }
+                            // Send to subscribers
+                        }
+                    })
+                });
+                Ok(handle)
                 //socket.close(None);
             }
 
@@ -59,11 +79,30 @@ impl MarketDataService for MarketData {
         }
     }
 
-    fn subscribe(&mut self) -> Result<(), String> {
-        Ok(())
+    fn subscribe(&mut self) -> Result<Receiver<String>, String> {
+        let (sender, receiver) = unbounded();
+        let subscriber = receiver.clone();
+        self.subscribers.lock().unwrap().push((sender, receiver));
+        // @todo ADD TO SYMBOLS...
+        Ok(subscriber)
     }
 
-    fn unsubscribe(&mut self) -> Result<(), String> {
+    fn unsubscribe(&mut self, subscriber: Receiver<String>) -> Result<(), String> {
+        match self.subscribers.lock() {
+            Ok(mut guard) => {
+                let subscribers: &mut Vec<(Sender<String>, Receiver<String>)> = &mut *guard;
+                if let Some(index) = subscribers
+                    .iter()
+                    .position(|(_, r)| std::ptr::eq(r, &subscriber))
+                {
+                    subscribers.remove(index);
+                } else {
+                    return Err("No such subscriber found".to_string());
+                }
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+        self.subscribers.lock().unwrap().remove(0);
         Ok(())
     }
 }
@@ -72,15 +111,24 @@ pub fn new(access_token: String) -> Box<dyn MarketDataService> {
     Box::new(MarketData {
         access_token,
         socket: None,
+        symbols: HashSet::new(),
+        subscribers: Arc::new(Mutex::new(Vec::new())),
     })
 }
 
 fn authenticate(access_token: &str) -> reqwest::Result<AuthResponse> {
-    reqwest::blocking::Client::new()
+    match reqwest::blocking::Client::new()
         .post("https://api.tradier.com/v1/markets/events/session")
         .header(AUTHORIZATION, format!("Bearer {}", access_token))
         .header(ACCEPT, "application/json")
         .header(CONTENT_LENGTH, "0")
         .send()?
         .json::<AuthResponse>()
+    {
+        Ok(r) => Ok(r),
+        Err(e) => {
+            println!("Error: {}", e);
+            Err(e)
+        }
+    }
 }
