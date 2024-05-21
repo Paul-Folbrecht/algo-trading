@@ -12,15 +12,35 @@ use tungstenite::{stream::MaybeTlsStream, WebSocket};
 
 pub trait MarketDataService {
     fn init(&mut self, symbols: Vec<String>) -> Result<JoinHandle<String>, String>;
-    fn subscribe(&mut self) -> Result<Receiver<String>, String>;
-    fn unsubscribe(&mut self, subscriber: Receiver<String>) -> Result<(), String>;
+    fn subscribe(&mut self) -> Result<Receiver<Quote>, String>;
+    fn unsubscribe(&mut self, subscriber: Receiver<Quote>) -> Result<(), String>;
+}
+
+pub fn new(access_token: String) -> Box<dyn MarketDataService> {
+    Box::new(MarketData {
+        access_token,
+        socket: None,
+        symbols: HashSet::new(),
+        subscribers: Arc::new(Mutex::new(Vec::new())),
+    })
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Quote {
+    symbol: String,
+    bid: f64,
+    ask: f64,
+    #[serde(with = "tradier_date_format")]
+    biddate: DateTime<Local>,
+    #[serde(with = "tradier_date_format")]
+    askdate: DateTime<Local>,
 }
 
 struct MarketData {
     access_token: String,
     socket: Option<WebSocket<MaybeTlsStream<TcpStream>>>,
     symbols: HashSet<String>,
-    subscribers: Arc<Mutex<Vec<(Sender<String>, Receiver<String>)>>>,
+    subscribers: Arc<Mutex<Vec<(Sender<Quote>, Receiver<Quote>)>>>,
 }
 
 #[derive(Deserialize)]
@@ -33,27 +53,7 @@ struct Stream {
     sessionid: String,
 }
 
-#[derive(Deserialize, Debug)]
-struct Quote {
-    symbol: String,
-    bid: f64,
-    ask: f64,
-    #[serde(with = "tradier_date_format")]
-    biddate: DateTime<Local>,
-    #[serde(with = "tradier_date_format")]
-    askdate: DateTime<Local>,
-}
-
 impl MarketData {}
-
-pub fn new(access_token: String) -> Box<dyn MarketDataService> {
-    Box::new(MarketData {
-        access_token,
-        socket: None,
-        symbols: HashSet::new(),
-        subscribers: Arc::new(Mutex::new(Vec::new())),
-    })
-}
 
 impl MarketDataService for MarketData {
     // @todo Lose symbols here - unless we simplify things and collect all symbols in main()...
@@ -80,13 +80,11 @@ impl MarketDataService for MarketData {
                         .expect("Error reading message")
                         .into_text()
                         .expect("Error converting message to text");
-                    println!("Received: {}", msg);
                     let quote =
                         serde_json::from_str::<Quote>(msg.as_str()).expect("Error parsing JSON");
                     println!("Received Quote: {:?}", quote);
-
                     for subscriber in subscribers.lock().unwrap().iter() {
-                        subscriber.0.send(msg.to_string()).unwrap();
+                        subscriber.0.send(quote.clone()).unwrap();
                     }
                 });
                 Ok(handle)
@@ -96,7 +94,7 @@ impl MarketDataService for MarketData {
         }
     }
 
-    fn subscribe(&mut self) -> Result<Receiver<String>, String> {
+    fn subscribe(&mut self) -> Result<Receiver<Quote>, String> {
         let (sender, receiver) = unbounded();
         let subscriber = receiver.clone();
         self.subscribers
@@ -106,10 +104,10 @@ impl MarketDataService for MarketData {
             .and_then(|_| Ok(subscriber))
     }
 
-    fn unsubscribe(&mut self, subscriber: Receiver<String>) -> Result<(), String> {
+    fn unsubscribe(&mut self, subscriber: Receiver<Quote>) -> Result<(), String> {
         match self.subscribers.lock() {
             Ok(mut guard) => {
-                let subscribers: &mut Vec<(Sender<String>, Receiver<String>)> = &mut *guard;
+                let subscribers: &mut Vec<(Sender<Quote>, Receiver<Quote>)> = &mut *guard;
                 if let Some(index) = subscribers
                     .iter()
                     .position(|(_, r)| std::ptr::eq(r, &subscriber))
