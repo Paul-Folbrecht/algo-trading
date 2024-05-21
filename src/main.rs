@@ -3,6 +3,9 @@ use market_data::MarketDataService;
 
 mod config;
 mod market_data;
+mod strategy;
+mod tradier_date_format;
+mod trading;
 
 fn main() {
     let config = AppConfig::new();

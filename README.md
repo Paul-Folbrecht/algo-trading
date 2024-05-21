@@ -17,7 +17,7 @@
 - Communication between services will be done via channels for decoupling and maximum efficiency (make use of many cores)
 - One MarketData service - Tradier's streaming data sends everything, it seems
 - N TradingServices - one per strategy - again to maximize efficiency
-  - Each TradingService will have a TradingStrategy
+  - Each TradingService will have a TradingStrategy, where the actual logic is
   - Driven by config - the strategy type and its parameters (symbols, etc)
 - One OrderService - will be a simple wrapper around the broker's API
 
@@ -29,9 +29,9 @@
 ### TradingService
 
 - Subscribes to all passed-in MarketData sources
+  - On creation? If so, it has no public methods...
 - Exists to wrap a Strategy, which is what makes trading decisions
-- Will have a loop that:
-  - Waits for new data from any source
+- Subscribe to MarketDataService, then loop on rx.recv()
   - Processes the data
   - Makes trading decisions via its attached TradingStrategy
   - Sends orders to OrderService

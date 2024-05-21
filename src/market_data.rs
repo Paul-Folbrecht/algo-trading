@@ -1,3 +1,5 @@
+use crate::tradier_date_format;
+use chrono::{DateTime, Local};
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
@@ -31,11 +33,31 @@ struct Stream {
     sessionid: String,
 }
 
+#[derive(Deserialize, Debug)]
+struct Quote {
+    symbol: String,
+    bid: f64,
+    ask: f64,
+    #[serde(with = "tradier_date_format")]
+    biddate: DateTime<Local>,
+    #[serde(with = "tradier_date_format")]
+    askdate: DateTime<Local>,
+}
+
 impl MarketData {}
 
+pub fn new(access_token: String) -> Box<dyn MarketDataService> {
+    Box::new(MarketData {
+        access_token,
+        socket: None,
+        symbols: HashSet::new(),
+        subscribers: Arc::new(Mutex::new(Vec::new())),
+    })
+}
+
 impl MarketDataService for MarketData {
+    // @todo Lose symbols here - unless we simplify things and collect all symbols in main()...
     fn init(&mut self, symbols: Vec<String>) -> Result<JoinHandle<String>, String> {
-        println!("self.access_token: {}", self.access_token);
         let response = authenticate(&self.access_token).unwrap();
         let session_id = &response.stream.sessionid;
         let symbols_json = serde_json::to_string(&symbols).unwrap();
@@ -47,32 +69,27 @@ impl MarketDataService for MarketData {
                     symbols_json,
                     session_id
                 );
-                socket.send(Message::Text(message)).unwrap();
-                // @todo Need to hang on to the socket?
-                //self.socket = Some(socket);
+                socket
+                    .send(Message::Text(message))
+                    .expect("Error sending message");
 
                 let subscribers = self.subscribers.clone();
-                // let handle: ScopedJoinHandle<String> = std::thread::scope(|s| {
-                //     s.spawn(move || {
-                //         loop {
-                //             let msg = socket.read().expect("Error reading message");
-                //             println!("Received: {}", msg);
-                //             for subscriber in subscribers.lock().unwrap().iter() {
-                //                 subscriber.0.send(msg.to_string()).unwrap();
-                //             }
-                //             // Send to subscribers
-                //         }
-                //     })
-                // });
                 let handle: JoinHandle<String> = std::thread::spawn(move || loop {
-                    let msg = socket.read().expect("Error reading message");
+                    let msg = socket
+                        .read()
+                        .expect("Error reading message")
+                        .into_text()
+                        .expect("Error converting message to text");
                     println!("Received: {}", msg);
+                    let quote =
+                        serde_json::from_str::<Quote>(msg.as_str()).expect("Error parsing JSON");
+                    println!("Received Quote: {:?}", quote);
+
                     for subscriber in subscribers.lock().unwrap().iter() {
                         subscriber.0.send(msg.to_string()).unwrap();
                     }
                 });
                 Ok(handle)
-                //socket.close(None);
             }
 
             Err(e) => Err(e.to_string()),
@@ -82,9 +99,11 @@ impl MarketDataService for MarketData {
     fn subscribe(&mut self) -> Result<Receiver<String>, String> {
         let (sender, receiver) = unbounded();
         let subscriber = receiver.clone();
-        self.subscribers.lock().unwrap().push((sender, receiver));
-        // @todo ADD TO SYMBOLS...
-        Ok(subscriber)
+        self.subscribers
+            .lock()
+            .and_then(|mut s| Ok(s.push((sender, receiver))))
+            .map_err(|e| e.to_string())
+            .and_then(|_| Ok(subscriber))
     }
 
     fn unsubscribe(&mut self, subscriber: Receiver<String>) -> Result<(), String> {
@@ -96,24 +115,14 @@ impl MarketDataService for MarketData {
                     .position(|(_, r)| std::ptr::eq(r, &subscriber))
                 {
                     subscribers.remove(index);
+                    Ok(())
                 } else {
                     return Err("No such subscriber found".to_string());
                 }
             }
             Err(e) => return Err(e.to_string()),
         }
-        self.subscribers.lock().unwrap().remove(0);
-        Ok(())
     }
-}
-
-pub fn new(access_token: String) -> Box<dyn MarketDataService> {
-    Box::new(MarketData {
-        access_token,
-        socket: None,
-        symbols: HashSet::new(),
-        subscribers: Arc::new(Mutex::new(Vec::new())),
-    })
 }
 
 fn authenticate(access_token: &str) -> reqwest::Result<AuthResponse> {
