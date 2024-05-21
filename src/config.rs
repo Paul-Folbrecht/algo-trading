@@ -5,8 +5,8 @@ use std::env;
 #[derive(Debug, Deserialize)]
 #[allow(unused)]
 pub struct Strategy {
-    pub strategy: String,
-    pub strategy_params: Vec<String>,
+    pub name: String,
+    pub symbols: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
