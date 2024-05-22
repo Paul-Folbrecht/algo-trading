@@ -12,7 +12,7 @@ pub struct Strategy {
 #[derive(Debug, Deserialize)]
 #[allow(unused)]
 pub struct AppConfig {
-    pub strategy: Strategy,
+    pub strategies: Vec<Strategy>,
 }
 
 impl AppConfig {

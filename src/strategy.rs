@@ -1,36 +1,50 @@
-enum StrategyType {
-    MeanReversion { strategy_params: Vec<String> },
+// enum StrategyType {
+//     MeanReversion { strategy_params: Vec<String> },
+// }
+
+// impl StrategyType {
+//     fn make(name: String, params: Vec<String>) -> Box<dyn Strategy> {
+//         match name {
+//             Self::MeanReversion { strategy_params } => {
+//                 Box::new(MeanReversion::new(strategy_params))
+//             }
+//         }
+//     }
+// }
+
+#[derive(Debug)]
+pub enum Strategy {
+    MeanReversion { symbols: Vec<String> },
 }
 
-impl StrategyType {
-    fn make(self, params: Vec<String>) -> Box<dyn Strategy> {
-        match self {
-            Self::MeanReversion { strategy_params } => {
-                Box::new(MeanReversion::new(strategy_params))
-            }
+impl Strategy {
+    pub fn new(name: String, symbols: Vec<String>) -> Self {
+        match name.as_str() {
+            "mean-reversion" => Strategy::MeanReversion { symbols },
+            _ => panic!("Unknown strategy: {}", name),
         }
     }
 }
 
-trait Strategy {
-    fn run(&self);
-}
+// pub trait Strategy {}
 
-struct MeanReversion {
-    strategy_params: Vec<String>,
-}
+// pub trait MeanReversion: Strategy {}
 
-impl MeanReversion {
-    fn new(strategy_params: Vec<String>) -> Self {
-        MeanReversion { strategy_params }
-    }
-}
+// pub struct MeanReversionStrategy {
+//     symbols: Vec<String>,
+// }
 
-impl Strategy for MeanReversion {
-    fn run(&self) {
-        println!(
-            "Running Mean Reversion strategy with params: {:?}",
-            self.strategy_params
-        );
-    }
-}
+// impl Strategy for MeanReversionStrategy {}
+
+// pub fn new(name: String, symbols: Vec<String>) -> impl Strategy {
+//     MeanReversionStrategy { symbols }
+// }
+
+// impl Strategy for MeanReversion {
+//     fn run(&self) {
+//         println!(
+//             "Running Mean Reversion strategy with params: {:?}",
+//             self.symbols
+//         );
+//     }
+// }

@@ -1,3 +1,7 @@
-[strategy]
-strategy = "mean-reversion"
+[[strategies]]
+name = "mean-reversion"
 symbols = ["SPY", "AAPL"]
+
+# [[strategies]]
+# name = "pairs"
+# symbols = []

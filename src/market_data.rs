@@ -11,18 +11,27 @@ use tungstenite::{connect, Message};
 use tungstenite::{stream::MaybeTlsStream, WebSocket};
 
 pub trait MarketDataService {
-    fn init(&mut self, symbols: Vec<String>) -> Result<JoinHandle<String>, String>;
-    fn subscribe(&mut self) -> Result<Receiver<Quote>, String>;
-    fn unsubscribe(&mut self, subscriber: Receiver<Quote>) -> Result<(), String>;
+    fn init(&self, symbols: Vec<String>) -> Result<JoinHandle<String>, String>;
+    fn subscribe(&self) -> Result<Receiver<Quote>, String>;
+    fn unsubscribe(&self, subscriber: Receiver<Quote>) -> Result<(), String>;
 }
 
-pub fn new(access_token: String) -> Box<dyn MarketDataService> {
-    Box::new(MarketData {
+pub fn new(access_token: String) -> Arc<dyn MarketDataService> {
+    Arc::new(MarketData {
         access_token,
         socket: None,
         symbols: HashSet::new(),
         subscribers: Arc::new(Mutex::new(Vec::new())),
     })
+}
+
+pub fn new2(access_token: String) -> impl MarketDataService {
+    MarketData {
+        access_token,
+        socket: None,
+        symbols: HashSet::new(),
+        subscribers: Arc::new(Mutex::new(Vec::new())),
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -60,7 +69,7 @@ mod implementation {
 
     impl MarketDataService for MarketData {
         // @todo Lose symbols here - unless we simplify things and collect all symbols in main()...
-        fn init(&mut self, symbols: Vec<String>) -> Result<JoinHandle<String>, String> {
+        fn init(&self, symbols: Vec<String>) -> Result<JoinHandle<String>, String> {
             let response = authenticate(&self.access_token).unwrap();
             let session_id = &response.stream.sessionid;
             let symbols_json = serde_json::to_string(&symbols).unwrap();
@@ -97,7 +106,7 @@ mod implementation {
             }
         }
 
-        fn subscribe(&mut self) -> Result<Receiver<Quote>, String> {
+        fn subscribe(&self) -> Result<Receiver<Quote>, String> {
             let (sender, receiver) = unbounded();
             let subscriber = receiver.clone();
             self.subscribers
@@ -107,7 +116,7 @@ mod implementation {
                 .and_then(|_| Ok(subscriber))
         }
 
-        fn unsubscribe(&mut self, subscriber: Receiver<Quote>) -> Result<(), String> {
+        fn unsubscribe(&self, subscriber: Receiver<Quote>) -> Result<(), String> {
             match self.subscribers.lock() {
                 Ok(mut guard) => {
                     let subscribers: &mut Vec<(Sender<Quote>, Receiver<Quote>)> = &mut *guard;
