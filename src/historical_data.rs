@@ -15,9 +15,8 @@ pub struct History {
 
 #[derive(Deserialize, Debug)]
 pub struct Day {
-    // #[serde(with = "tradier_date_format")]
-    // date: NaiveDate,
-    date: String,
+    #[serde(with = "tradier_date_format")]
+    date: NaiveDate,
     open: f64,
     high: f64,
     low: f64,
@@ -31,23 +30,12 @@ pub fn fetch(
     start: NaiveDate,
     end: NaiveDate,
 ) -> reqwest::Result<History> {
-    // ?symbol=AAPL&interval=daily&start=2019-05-04&end=2019-05-04&session_filter=all" \
     let base = "https://api.tradier.com/v1/markets/history";
     let params = format!(
         "symbol={}&interval=daily&start={}&end={}&session_filter=all",
         symbol, start, end
     );
     let url = format!("{}?{}", base, params);
-    println!(
-        "response:\n{}",
-        reqwest::blocking::Client::new()
-            .get(url.as_str())
-            .header(AUTHORIZATION, format!("Bearer {}", access_token))
-            .header(ACCEPT, "application/json")
-            .header(CONTENT_LENGTH, "0")
-            .send()?
-            .text()?
-    );
     match reqwest::blocking::Client::new()
         .get(url.as_str())
         .header(AUTHORIZATION, format!("Bearer {}", access_token))
