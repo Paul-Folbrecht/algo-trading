@@ -7,9 +7,10 @@ use config::AppConfig;
 use trading::TradingService;
 
 mod config;
+mod historical_data;
 mod market_data;
+mod serde;
 mod strategy;
-mod tradier_date_format;
 mod trading;
 
 fn main() {

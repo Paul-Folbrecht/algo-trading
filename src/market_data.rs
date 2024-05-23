@@ -1,4 +1,4 @@
-use crate::tradier_date_format;
+use crate::serde::tradier_date_time_format;
 use chrono::{DateTime, Local};
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
@@ -25,23 +25,14 @@ pub fn new(access_token: String) -> Arc<dyn MarketDataService> {
     })
 }
 
-// pub fn new2(access_token: String) -> impl MarketDataService {
-//     MarketData {
-//         access_token,
-//         socket: None,
-//         symbols: HashSet::new(),
-//         subscribers: Arc::new(Mutex::new(Vec::new())),
-//     }
-// }
-
 #[derive(Deserialize, Debug, Clone)]
 pub struct Quote {
     symbol: String,
     bid: f64,
     ask: f64,
-    #[serde(with = "tradier_date_format")]
+    #[serde(with = "tradier_date_time_format")]
     biddate: DateTime<Local>,
-    #[serde(with = "tradier_date_format")]
+    #[serde(with = "tradier_date_time_format")]
     askdate: DateTime<Local>,
 }
 
