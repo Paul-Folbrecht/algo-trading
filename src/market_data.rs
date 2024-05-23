@@ -25,14 +25,14 @@ pub fn new(access_token: String) -> Arc<dyn MarketDataService> {
     })
 }
 
-pub fn new2(access_token: String) -> impl MarketDataService {
-    MarketData {
-        access_token,
-        socket: None,
-        symbols: HashSet::new(),
-        subscribers: Arc::new(Mutex::new(Vec::new())),
-    }
-}
+// pub fn new2(access_token: String) -> impl MarketDataService {
+//     MarketData {
+//         access_token,
+//         socket: None,
+//         symbols: HashSet::new(),
+//         subscribers: Arc::new(Mutex::new(Vec::new())),
+//     }
+// }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Quote {
@@ -94,7 +94,7 @@ mod implementation {
                             .expect("Error converting message to text");
                         let quote = serde_json::from_str::<Quote>(msg.as_str())
                             .expect("Error parsing JSON");
-                        println!("Received Quote: {:?}", quote);
+                        println!("MarketDataService received Quote: {:?}", quote);
                         for subscriber in subscribers.lock().unwrap().iter() {
                             subscriber.0.send(quote.clone()).unwrap();
                         }
