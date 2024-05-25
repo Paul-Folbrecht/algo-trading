@@ -30,7 +30,6 @@ fn main() {
         );
         trading_service.run().unwrap();
     });
-    // @todo symbls should be collected in main() and passed to market_data_service
     let handle = market_data_service.init(symbols.into_iter().collect());
     handle.unwrap().join().unwrap();
 }

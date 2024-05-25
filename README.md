@@ -1,5 +1,16 @@
 # algo-trading
 
+## Todo
+
+- HistoricalDataService
+- Basic mean-reversion strategy
+- Backtesting
+  - Simulate a market data feed and see what happens!
+- OrderService
+  - Use the Tradier API for placing orders
+  - Track positions independently and reconcile with Tradier on startup
+  - Compute P&L on every sell and store in MongoDB
+
 ## Dependendcy Injection
 
 - Will use dynamic dispatch against traits
@@ -19,7 +30,8 @@
 - N TradingServices - one per strategy - again to maximize efficiency
   - Each TradingService will have a TradingStrategy, where the actual logic is
   - Driven by config - the strategy type and its parameters (symbols, etc)
-- One OrderService - will be a simple wrapper around the broker's API
+- One OrderService - will be a simple wrapper around Tradier's API
+  - Will track positions (MongoDB) independently also
 
 ### Communication
 

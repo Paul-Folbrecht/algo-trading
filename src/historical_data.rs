@@ -3,9 +3,14 @@ use chrono::NaiveDate;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug)]
-struct HistoryResponse {
-    history: History,
+trait HistoricalDataService {
+    fn fetch(
+        access_token: &str,
+        symbol: &str,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> reqwest::Result<History>;
+} {
 }
 
 #[derive(Deserialize, Debug)]
@@ -43,7 +48,7 @@ pub fn fetch(
         .header(CONTENT_LENGTH, "0")
         .send()
     {
-        Ok(response) => match response.json::<HistoryResponse>() {
+        Ok(response) => match response.json::<implementation::HistoryResponse>() {
             Ok(history) => Ok(history.history),
             Err(e) => {
                 println!("Failed to deserialize: {}", e);
@@ -54,6 +59,15 @@ pub fn fetch(
             println!("Request failed: {}", e);
             Err(e)
         }
+    }
+}
+
+mod implementation {
+    use super::*;
+
+    #[derive(Deserialize, Debug)]
+    pub struct HistoryResponse {
+        pub history: History,
     }
 }
 
