@@ -10,7 +10,7 @@ pub trait TradingService {
 pub fn new(
     strategy_name: String,
     symbols: Vec<String>,
-    market_data_service: Arc<dyn MarketDataService>,
+    market_data_service: Arc<impl MarketDataService>,
 ) -> impl TradingService {
     let strategy = crate::strategy::Strategy::new(strategy_name, symbols);
     Trading {
@@ -20,16 +20,16 @@ pub fn new(
     }
 }
 
-pub struct Trading {
+pub struct Trading<M: MarketDataService> {
     strategy: Strategy,
-    market_data_service: Arc<dyn MarketDataService>,
+    market_data_service: Arc<M>,
     thread_handle: Option<std::thread::JoinHandle<()>>,
 }
 
 mod implementation {
     use super::*;
 
-    impl TradingService for Trading {
+    impl<M: MarketDataService> TradingService for Trading<M> {
         fn run(&mut self) -> Result<(), String> {
             println!("Running TradingService with strategy: {:?}", self.strategy);
             match self.market_data_service.subscribe() {

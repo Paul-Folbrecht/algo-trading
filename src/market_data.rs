@@ -16,14 +16,23 @@ pub trait MarketDataService {
     fn unsubscribe(&self, subscriber: Receiver<Quote>) -> Result<(), String>;
 }
 
-pub fn new(access_token: String) -> Arc<dyn MarketDataService> {
-    Arc::new(MarketData {
+pub fn new(access_token: String) -> Arc<impl MarketDataService> {
+    Arc::new(implementation::MarketData {
         access_token,
         socket: None,
         symbols: HashSet::new(),
         subscribers: Arc::new(Mutex::new(Vec::new())),
     })
 }
+
+// pub fn new(access_token: String) -> Arc<dyn MarketDataService> {
+//     Arc::new(MarketData {
+//         access_token,
+//         socket: None,
+//         symbols: HashSet::new(),
+//         subscribers: Arc::new(Mutex::new(Vec::new())),
+//     })
+// }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Quote {
@@ -34,13 +43,6 @@ pub struct Quote {
     biddate: DateTime<Local>,
     #[serde(with = "tradier_date_time_format")]
     askdate: DateTime<Local>,
-}
-
-struct MarketData {
-    access_token: String,
-    socket: Option<WebSocket<MaybeTlsStream<TcpStream>>>,
-    symbols: HashSet<String>,
-    subscribers: Arc<Mutex<Vec<(Sender<Quote>, Receiver<Quote>)>>>,
 }
 
 mod implementation {
@@ -56,7 +58,14 @@ mod implementation {
         sessionid: String,
     }
 
-    impl MarketData {}
+    pub struct MarketData {
+        pub access_token: String,
+        pub socket: Option<WebSocket<MaybeTlsStream<TcpStream>>>,
+        pub symbols: HashSet<String>,
+        pub subscribers: Arc<Mutex<Vec<(Sender<Quote>, Receiver<Quote>)>>>,
+    }
+
+    //    impl MarketData {}
 
     impl MarketDataService for MarketData {
         // @todo Lose symbols here - unless we simplify things and collect all symbols in main()...

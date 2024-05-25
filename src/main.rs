@@ -4,6 +4,7 @@
 use std::collections::HashSet;
 
 use config::AppConfig;
+use market_data::MarketDataService;
 use trading::TradingService;
 
 mod config;
