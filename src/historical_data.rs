@@ -88,7 +88,8 @@ mod tests {
         let symbol = "AAPL";
         let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
         let end = NaiveDate::from_ymd_opt(2024, 1, 3).unwrap();
-        match fetch(&access_token, symbol, start, end) {
+        let service = new(access_token);
+        match service.fetch(symbol, start, end) {
             Ok(history) => {
                 println!("History: {:?}", history);
                 assert!(history.day.len() > 0);

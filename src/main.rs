@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    sync::{atomic::AtomicBool, Arc},
+};
 
 use config::AppConfig;
 use market_data::MarketDataService;
@@ -20,6 +23,8 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let access_token = &args[1];
     let market_data_service = market_data::new(access_token.to_string());
+    let histiorical_data_service = historical_data::new(access_token.to_string());
+    let shutdown = Arc::new(AtomicBool::new(false));
     let mut symbols: HashSet<String> = HashSet::new();
 
     config.strategies.iter().for_each(|strategy| {
@@ -28,9 +33,10 @@ fn main() {
             strategy.name.clone(),
             strategy.symbols.clone(),
             market_data_service.clone(),
+            histiorical_data_service.clone(),
         );
         trading_service.run().unwrap();
     });
-    let handle = market_data_service.init(symbols.into_iter().collect());
+    let handle = market_data_service.init(shutdown, symbols.into_iter().collect());
     handle.unwrap().join().unwrap();
 }

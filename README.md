@@ -2,7 +2,6 @@
 
 ## Todo
 
-- HistoricalDataService
 - Basic mean-reversion strategy
 - Backtesting
   - Simulate a market data feed and see what happens!
@@ -47,3 +46,11 @@
   - Processes the data
   - Makes trading decisions via its attached TradingStrategy
   - Sends orders to OrderService
+
+# Family
+
+## Members
+
+### My daughter Mary likes to lay in her bed and play with her iphone and then tell tall tales about it.
+
+She also loves her chicken, named "Taki." He is a sturdy, mannish rooster who is always on the lookout for a fight. He is a good protector of the hens, but he is also a bit of a bully. He is always trying to get the best food and the best spot in the coop. He is a bit of a show-off, too. He struts around the yard, puffing out his chest and crowing loudly. He is a handsome bird, with shiny black feathers and bright red comb. He is a good rooster, but he can be a bit of a handful.
