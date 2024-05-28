@@ -7,16 +7,13 @@ use std::{
 };
 
 use config::AppConfig;
-use market_data::MarketDataService;
-use trading::TradingService;
+use services::historical_data;
+use services::market_data;
+use services::market_data::MarketDataService;
+use services::trading;
+use services::trading::TradingService;
 
 mod config;
-mod historical_data;
-mod market_data;
-mod persistence;
-mod serde;
-mod strategy;
-mod trading;
 
 fn main() {
     let config = AppConfig::new().expect("Could not load config");
