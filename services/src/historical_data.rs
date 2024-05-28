@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use chrono::NaiveDate;
-use core::serde::tradier_date_format;
+use domain::domain::{Day, History};
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
 
@@ -11,22 +11,6 @@ pub trait HistoricalDataService {
 
 pub fn new(access_token: String) -> Arc<impl HistoricalDataService> {
     Arc::new(implementation::HistoricalData { access_token })
-}
-
-#[derive(Deserialize, Debug)]
-pub struct History {
-    day: Vec<Day>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct Day {
-    #[serde(with = "tradier_date_format")]
-    date: NaiveDate,
-    open: f64,
-    high: f64,
-    low: f64,
-    close: f64,
-    volume: i64,
 }
 
 mod implementation {

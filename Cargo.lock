@@ -454,6 +454,12 @@ dependencies = [
 [[package]]
 name = "domain"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "core",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "encoding_rs"

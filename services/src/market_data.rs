@@ -1,6 +1,5 @@
-use chrono::{DateTime, Local};
-use core::serde::tradier_date_time_format;
 use crossbeam_channel::{unbounded, Receiver, Sender};
+use domain::domain::Quote;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
 use std::collections::HashSet;
@@ -28,17 +27,6 @@ pub fn new(access_token: String) -> Arc<impl MarketDataService> {
         symbols: HashSet::new(),
         subscribers: Arc::new(Mutex::new(Vec::new())),
     })
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct Quote {
-    symbol: String,
-    bid: f64,
-    ask: f64,
-    #[serde(with = "tradier_date_time_format")]
-    biddate: DateTime<Local>,
-    #[serde(with = "tradier_date_time_format")]
-    askdate: DateTime<Local>,
 }
 
 mod implementation {

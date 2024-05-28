@@ -1,1 +1,1 @@
-mod domain;
+pub mod domain;
