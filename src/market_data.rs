@@ -157,7 +157,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_init() {
+    fn test() {
         let access_token = std::env::var("TRADIER_ACCESS_TOKEN").unwrap();
         let service = new(access_token);
         let symbols = vec!["AAPL".to_string()];

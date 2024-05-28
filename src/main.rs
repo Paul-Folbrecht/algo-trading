@@ -13,6 +13,7 @@ use trading::TradingService;
 mod config;
 mod historical_data;
 mod market_data;
+mod persistence;
 mod serde;
 mod strategy;
 mod trading;
