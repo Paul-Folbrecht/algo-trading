@@ -11,7 +11,7 @@ use services::historical_data;
 use services::market_data;
 use services::market_data::MarketDataService;
 use services::trading;
-use services::trading::TradingService;
+use services::trading::trading::TradingService;
 
 mod config;
 
@@ -27,9 +27,9 @@ fn main() {
 
     config.strategies.iter().for_each(|strategy| {
         symbols.extend(strategy.symbols.clone());
-        let mut trading_service = trading::new(
+        let mut trading_service = trading::trading::new(
             strategy.name.clone(),
-            strategy.symbols.clone(),
+            strategy.symbols.as_ref(),
             market_data_service.clone(),
             histiorical_data_service.clone(),
         );

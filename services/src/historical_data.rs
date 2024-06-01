@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use chrono::NaiveDate;
-use domain::domain::{Day, History};
+use domain::domain::History;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
 
