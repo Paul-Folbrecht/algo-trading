@@ -4,12 +4,7 @@ use implementation::*;
 
 struct MockHistoricalDataService {}
 impl HistoricalDataService for MockHistoricalDataService {
-    fn fetch(
-        &self,
-        symbol: &str,
-        start_date: NaiveDate,
-        end_date: NaiveDate,
-    ) -> Result<History, reqwest::Error> {
+    fn fetch(&self, _: &str, _: NaiveDate, _: NaiveDate) -> Result<History, reqwest::Error> {
         Ok(History {
             day: vec![
                 Day {

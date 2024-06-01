@@ -28,3 +28,11 @@ pub struct Day {
     pub close: f64,
     pub volume: i64,
 }
+
+#[derive(Debug)]
+pub struct SymbolData {
+    pub symbol: String,
+    pub history: Vec<Day>,
+    pub mean: f64,
+    pub std_dev: f64,
+}
