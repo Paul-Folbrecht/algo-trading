@@ -1,4 +1,5 @@
 use super::*;
+use chrono::NaiveDate;
 use domain::domain::{Day, History};
 use implementation::*;
 
@@ -40,14 +41,24 @@ impl HistoricalDataService for MockHistoricalDataService {
 fn test_load_history() {
     let symbols = vec!["AAPL".to_string()];
     let historical_data_service = Arc::new(MockHistoricalDataService {});
-    // let trading_service = new(
-    //     "Test".to_string(),
-    //     &symbols,
-    //     Arc::new(MockMarketDataService {}),
-    //     historical_data_service.clone(),
-    // );
     let data = load_history(&symbols, historical_data_service);
     let aapl = data.get(&"AAPL".to_string()).unwrap();
     assert_eq!(aapl.mean, 13.333333333333334);
     assert_eq!(aapl.std_dev, 4.714045207910316);
 }
+
+struct Wrapper {
+    id: i64,
+}
+
+fn test() {
+    let values: Vec<Wrapper> = vec![Wrapper { id: 1 }, Wrapper { id: 2 }, Wrapper { id: 3 }];
+    let xs: Vec<Wrapper> = values.iter().collect();
+}
+// @todo TradingService test with mock data - note, backtesting could be done the same way!
+// let trading_service = new(
+//     "Test".to_string(),
+//     &symbols,
+//     Arc::new(MockMarketDataService {}),
+//     historical_data_service.clone(),
+// );

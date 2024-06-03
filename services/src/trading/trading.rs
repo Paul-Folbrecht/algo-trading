@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::historical_data::*;
 use crate::market_data::*;
 use crate::strategy::*;
-use chrono::NaiveDate;
 
 pub trait TradingService {
     fn run(&mut self) -> Result<(), String>;
@@ -15,9 +14,8 @@ pub fn new<'market_data>(
     market_data_service: Arc<impl MarketDataService + 'market_data + Send + Sync>,
     historical_data_service: Arc<impl HistoricalDataService + 'market_data + Send + Sync>,
 ) -> impl TradingService + 'market_data {
-    let strategy = crate::strategy::Strategy::new(strategy_name, symbols.clone());
     Trading {
-        strategy,
+        strategy_name,
         symbols,
         market_data_service,
         historical_data_service,
@@ -30,7 +28,7 @@ pub struct Trading<
     M: MarketDataService + Send + Sync,
     H: HistoricalDataService + Send + Sync,
 > {
-    strategy: Strategy,
+    strategy_name: String,
     symbols: &'market_data Vec<String>,
     market_data_service: Arc<M>,
     historical_data_service: Arc<H>,
@@ -39,6 +37,7 @@ pub struct Trading<
 
 mod implementation {
     use super::*;
+    use chrono::Local;
     use domain::domain::SymbolData;
     use std::collections::HashMap;
 
@@ -49,13 +48,17 @@ mod implementation {
         > TradingService for Trading<'market_data, M, H>
     {
         fn run(&mut self) -> Result<(), String> {
-            println!("Running TradingService with strategy: {:?}", self.strategy);
+            println!(
+                "Running TradingService with strategy: {:?}",
+                self.strategy_name
+            );
             let symbol_data = load_history(self.symbols, self.historical_data_service.clone());
 
             match self.market_data_service.subscribe() {
                 Ok(rx) => {
                     println!("TradingService subscribed to MarketDataService");
-                    let strategy = self.strategy.clone();
+                    let strategy =
+                        crate::strategy::Strategy::new(&self.strategy_name, self.symbols.clone());
                     self.thread_handle = Some(std::thread::spawn(move || loop {
                         match rx.recv() {
                             Ok(quote) => {
@@ -82,11 +85,12 @@ mod implementation {
         symbols
             .iter()
             .map(|symbol| -> (String, SymbolData) {
-                let start_date = NaiveDate::from_ymd_opt(2024, 4, 1).unwrap();
-                let end_date = NaiveDate::from_ymd_opt(2024, 4, 30).unwrap();
+                let end = Local::now().naive_local().date();
+                let start = end - chrono::Duration::days(90);
+                println!("Loading history for {} from {} to {}", symbol, start, end);
                 let query: Result<Vec<domain::domain::Day>, reqwest::Error> =
                     historical_data_service
-                        .fetch(symbol, start_date, end_date)
+                        .fetch(symbol, start, end)
                         .map(|h| h.day);
                 match query {
                     Ok(history) => {
@@ -105,6 +109,7 @@ mod implementation {
                             mean,
                             std_dev,
                         };
+                        println!("Loaded history for {}: {:?}", symbol, data);
                         (symbol.to_owned(), data)
                     }
                     Err(e) => panic!("Can't load history for {}: {}", symbol, e),
@@ -112,48 +117,6 @@ mod implementation {
             })
             .into_iter()
             .collect()
-    }
-}
-
-mod test {
-    use std::{collections::HashMap, sync::Arc};
-
-    pub trait Service1 {
-        fn get_data(&self) -> HashMap<String, f64>;
-    }
-
-    pub trait Service {
-        fn run(&mut self) -> ();
-    }
-
-    pub struct ServiceStruct<'data, M: Service1 + Send + Sync> {
-        names: &'data Vec<String>,
-        service_1: Arc<M>,
-    }
-
-    impl<'data, M: Service1 + Send + Sync> Service for ServiceStruct<'data, M> {
-        fn run(&mut self) -> () {
-            let data = load(self.names, self.service_1.clone());
-            let (tx, rx) = std::sync::mpsc::channel::<String>();
-
-            std::thread::spawn(move || loop {
-                match rx.recv() {
-                    Ok(q) => {
-                        println!("{:?}", q);
-                    }
-                    Err(e) => {
-                        println!("Error on receive!: {}", e);
-                    }
-                }
-            });
-        }
-    }
-
-    pub fn load<'data>(
-        names: &'data Vec<String>,
-        service1: Arc<impl Service1 + 'data>,
-    ) -> HashMap<String, f64> {
-        service1.get_data()
     }
 }
 
