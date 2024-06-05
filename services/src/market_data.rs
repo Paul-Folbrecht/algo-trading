@@ -55,9 +55,9 @@ mod implementation {
             shutdown: Arc<AtomicBool>,
             symbols: Vec<String>,
         ) -> Result<JoinHandle<()>, String> {
-            let response = authenticate(&self.access_token).unwrap();
+            let response = authenticate(&self.access_token).expect("Error authenticating");
             let session_id = &response.stream.sessionid;
-            let symbols_json = serde_json::to_string(&symbols).unwrap();
+            let symbols_json = serde_json::to_string(&symbols).expect("rror serializing symbols");
 
             match connect("wss://ws.tradier.com/v1/markets/events") {
                 Ok((mut socket, _)) => {
@@ -82,7 +82,10 @@ mod implementation {
                                 .expect("Error parsing JSON");
                             println!("MarketDataService received Quote: {:?}", quote);
                             for subscriber in subscribers.lock().unwrap().iter() {
-                                subscriber.0.send(quote.clone()).unwrap();
+                                match subscriber.0.send(quote.clone()) {
+                                    Ok(_) => (),
+                                    Err(e) => eprintln!("Error sending quote to subscriber: {}", e),
+                                }
                             }
                         }
                     });
@@ -133,7 +136,7 @@ mod implementation {
         {
             Ok(r) => Ok(r),
             Err(e) => {
-                println!("Error: {}", e);
+                eprintln!("Error: {}", e);
                 Err(e)
             }
         }

@@ -48,12 +48,12 @@ mod implementation {
                 Ok(response) => match response.json::<implementation::HistoryResponse>() {
                     Ok(history) => Ok(history.history),
                     Err(e) => {
-                        println!("Failed to deserialize: {}", e);
+                        eprintln!("Failed to deserialize: {}", e);
                         Err(e)
                     }
                 },
                 Err(e) => {
-                    println!("Request failed: {}", e);
+                    eprintln!("Request failed: {}", e);
                     Err(e)
                 }
             }

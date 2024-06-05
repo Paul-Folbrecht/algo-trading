@@ -62,10 +62,12 @@ mod implementation {
                         match rx.recv() {
                             Ok(quote) => {
                                 println!("TradingService received quote:\n{:?}", quote);
-                                strategy.handle(&quote, symbol_data.get(&quote.symbol).unwrap());
+                                if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
+                                    strategy.handle(&quote, symbol_data);
+                                }
                             }
                             Err(e) => {
-                                println!("Error on receive!: {}", e);
+                                eprintln!("Error on receive!: {}", e);
                             }
                         }
                     }));

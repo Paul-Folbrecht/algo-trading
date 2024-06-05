@@ -33,7 +33,10 @@ fn main() {
             market_data_service.clone(),
             histiorical_data_service.clone(),
         );
-        trading_service.run().unwrap();
+        match trading_service.run() {
+            Ok(_) => (),
+            Err(e) => eprintln!("Error starting TradingService {}: {}", strategy.name, e),
+        }
     });
     let handle = market_data_service.init(shutdown, symbols.into_iter().collect());
     handle.unwrap().join().unwrap();
