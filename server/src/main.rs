@@ -38,6 +38,10 @@ fn main() {
             Err(e) => eprintln!("Error starting TradingService {}: {}", strategy.name, e),
         }
     });
+
     let handle = market_data_service.init(shutdown, symbols.into_iter().collect());
-    handle.unwrap().join().unwrap();
+    match handle.unwrap().join() {
+        Ok(_) => println!("MarketDataService thread exited successfully"),
+        Err(e) => eprintln!("Error joining MarketDataService thread: {:?}", e),
+    }
 }
