@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::historical_data::*;
 use crate::market_data::*;
-use crate::strategy::*;
+use domain::domain::*;
 
 pub trait TradingService {
     fn run(&mut self) -> Result<(), String>;
@@ -57,8 +57,7 @@ mod implementation {
             match self.market_data_service.subscribe() {
                 Ok(rx) => {
                     println!("TradingService subscribed to MarketDataService");
-                    let strategy =
-                        crate::strategy::Strategy::new(&self.strategy_name, self.symbols.clone());
+                    let strategy = Strategy::new(&self.strategy_name, self.symbols.clone());
                     self.thread_handle = Some(std::thread::spawn(move || loop {
                         match rx.recv() {
                             Ok(quote) => {
@@ -86,7 +85,7 @@ mod implementation {
             .iter()
             .map(|symbol| -> (String, SymbolData) {
                 let end = Local::now().naive_local().date();
-                let start = end - chrono::Duration::days(90);
+                let start = end - chrono::Duration::days(20);
                 println!("Loading history for {} from {} to {}", symbol, start, end);
                 let query: Result<Vec<domain::domain::Day>, reqwest::Error> =
                     historical_data_service
