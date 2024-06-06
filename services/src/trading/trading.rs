@@ -14,7 +14,7 @@ pub fn new<'market_data>(
     market_data_service: Arc<impl MarketDataService + 'market_data + Send + Sync>,
     historical_data_service: Arc<impl HistoricalDataService + 'market_data + Send + Sync>,
 ) -> impl TradingService + 'market_data {
-    Trading {
+    implementation::Trading {
         strategy_name,
         symbols,
         market_data_service,
@@ -23,23 +23,23 @@ pub fn new<'market_data>(
     }
 }
 
-pub struct Trading<
-    'market_data,
-    M: MarketDataService + Send + Sync,
-    H: HistoricalDataService + Send + Sync,
-> {
-    strategy_name: String,
-    symbols: &'market_data Vec<String>,
-    market_data_service: Arc<M>,
-    historical_data_service: Arc<H>,
-    thread_handle: Option<std::thread::JoinHandle<()>>,
-}
-
 mod implementation {
     use super::*;
     use chrono::Local;
     use domain::domain::SymbolData;
     use std::collections::HashMap;
+
+    pub struct Trading<
+        'market_data,
+        M: MarketDataService + Send + Sync,
+        H: HistoricalDataService + Send + Sync,
+    > {
+        pub strategy_name: String,
+        pub symbols: &'market_data Vec<String>,
+        pub market_data_service: Arc<M>,
+        pub historical_data_service: Arc<H>,
+        pub thread_handle: Option<std::thread::JoinHandle<()>>,
+    }
 
     impl<
             'market_data,
@@ -79,7 +79,7 @@ mod implementation {
         }
     }
 
-    pub fn load_history<'market_data>(
+    fn load_history<'market_data>(
         symbols: &'market_data Vec<String>,
         historical_data_service: Arc<impl HistoricalDataService + 'market_data>,
     ) -> HashMap<String, SymbolData> {

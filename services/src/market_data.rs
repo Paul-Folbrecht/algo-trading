@@ -80,7 +80,7 @@ mod implementation {
                                 .expect("Error converting message to text");
                             let quote = serde_json::from_str::<Quote>(msg.as_str())
                                 .expect("Error parsing JSON");
-                            println!("MarketDataService received Quote: {:?}", quote);
+                            println!("MarketDataService received quote: {:?}", quote);
                             for subscriber in subscribers.lock().unwrap().iter() {
                                 match subscriber.0.send(quote.clone()) {
                                     Ok(_) => (),
@@ -89,6 +89,7 @@ mod implementation {
                             }
                         }
                     });
+
                     Ok(handle)
                 }
 
