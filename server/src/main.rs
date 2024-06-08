@@ -21,7 +21,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let access_token = &args[1];
     let market_data_service = market_data::new(access_token.to_string());
-    let histiorical_data_service = historical_data::new(access_token.to_string());
+    let historical_data_service = historical_data::new(access_token.to_string());
     let shutdown = Arc::new(AtomicBool::new(false));
     let mut symbols: HashSet<String> = HashSet::new();
 
@@ -31,7 +31,7 @@ fn main() {
             strategy.name.clone(),
             strategy.symbols.as_ref(),
             market_data_service.clone(),
-            histiorical_data_service.clone(),
+            historical_data_service.clone(),
         );
         match trading_service.run() {
             Ok(_) => (),

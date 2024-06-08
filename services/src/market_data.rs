@@ -57,7 +57,7 @@ mod implementation {
         ) -> Result<JoinHandle<()>, String> {
             let response = authenticate(&self.access_token).expect("Error authenticating");
             let session_id = &response.stream.sessionid;
-            let symbols_json = serde_json::to_string(&symbols).expect("rror serializing symbols");
+            let symbols_json = serde_json::to_string(&symbols).expect("Error serializing symbols");
 
             match connect("wss://ws.tradier.com/v1/markets/events") {
                 Ok((mut socket, _)) => {
