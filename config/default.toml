@@ -1,6 +1,7 @@
 [[strategies]]
 name = "mean-reversion"
 symbols = ["SPY", "AAPL"]
+capital = [10000, 10000]
 
 # [[strategies]]
 # name = "pairs"

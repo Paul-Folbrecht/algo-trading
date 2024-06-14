@@ -72,6 +72,8 @@ impl StrategyHandler for Strategy {
                     );
 
                     let buy = quote.ask < data.mean - 2.0 * data.std_dev;
+                    let sell = quote.ask > data.mean + 2.0 * data.std_dev;
+
                     if buy {
                         println!("***Buy signal for {}***", quote.symbol);
                     } else {
