@@ -136,10 +136,7 @@ mod implementation {
             .json::<AuthResponse>()
         {
             Ok(r) => Ok(r),
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                Err(e)
-            }
+            Err(e) => Err(e),
         }
     }
 }

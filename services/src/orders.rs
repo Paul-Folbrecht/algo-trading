@@ -12,6 +12,17 @@ pub fn new(access_token: String, account_id: String, sandbox: bool) -> Arc<impl 
         access_token,
         account_id,
         sandbox,
+        base_url: if sandbox {
+            "sandbox.tradier.com".into()
+        } else {
+            "api.tradier.com".into()
+        },
+        backoff: ExponentialBackoff {
+            initial_interval: std::time::Duration::from_millis(100),
+            max_interval: std::time::Duration::from_secs(2),
+            max_elapsed_time: Some(std::time::Duration::from_secs(5)),
+            ..ExponentialBackoff::default()
+        },
     })
 }
 
@@ -25,6 +36,8 @@ mod implementation {
         pub access_token: String,
         pub account_id: String,
         pub sandbox: bool,
+        pub base_url: String,
+        pub backoff: ExponentialBackoff,
     }
 
     #[derive(Deserialize)]
@@ -41,12 +54,10 @@ mod implementation {
     impl OrderService for Orders {
         fn create_order(&self, order: Order) -> Result<Order, String> {
             let op = || {
-                let base = if self.sandbox {
-                    "sandbox.tradier.com"
-                } else {
-                    "api.tradier.com"
-                };
-                let url = format!("https://{}/v1/accounts/{}/orders", base, self.account_id);
+                let url = format!(
+                    "https://{}/v1/accounts/{}/orders",
+                    self.base_url, self.account_id
+                );
                 let body = format!("account_id={}&class=equity&symbol={}&side={}&quantity={}&type=market&duration=day",
                     self.account_id, order.symbol, order.side, order.qty);
                 reqwest::blocking::Client::new()
@@ -59,19 +70,13 @@ mod implementation {
                     .map_err(backoff::Error::transient)
             };
 
-            let backoff = ExponentialBackoff {
-                initial_interval: std::time::Duration::from_millis(100),
-                max_interval: std::time::Duration::from_secs(2),
-                max_elapsed_time: Some(std::time::Duration::from_secs(5)),
-                ..ExponentialBackoff::default()
-            };
-            let response: Result<OrderResponse, String> = retry(backoff, op)
+            let response: Result<OrderResponse, String> = retry(self.backoff.clone(), op)
                 .map_err::<String, _>(|e| e.to_string())
                 .and_then(|r| {
-                    // println!("Response: {:?}", r.text().unwrap());
-                    // return Err(String::from("Not implemented"));
                     r.json::<OrderResponse>()
-                        .map_err::<String, _>(|e| format!("Could not parse body - note, this will occur in any error condition: {}", e.to_string()))
+                        .map_err::<String, _>(|e| {
+                            format!("Could not parse body - note, this will occur on any error condition: {}", e.to_string())
+                        })
                 });
 
             match response {
