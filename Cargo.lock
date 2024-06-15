@@ -266,7 +266,9 @@ dependencies = [
 name = "core"
 version = "0.1.0"
 dependencies = [
+ "backoff",
  "chrono",
+ "reqwest",
  "serde",
  "serde_json",
 ]

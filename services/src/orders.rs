@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use backoff::{retry, ExponentialBackoff};
+use core::http::*;
 use domain::domain::*;
 
 pub trait OrderService {
@@ -53,31 +54,17 @@ mod implementation {
 
     impl OrderService for Orders {
         fn create_order(&self, order: Order) -> Result<Order, String> {
-            let op = || {
-                let url = format!(
-                    "https://{}/v1/accounts/{}/orders",
-                    self.base_url, self.account_id
-                );
-                let body = format!("account_id={}&class=equity&symbol={}&side={}&quantity={}&type=market&duration=day",
-                    self.account_id, order.symbol, order.side, order.qty);
-                reqwest::blocking::Client::new()
-                    .post(url)
-                    .header(AUTHORIZATION, format!("Bearer {}", self.access_token))
-                    .header(ACCEPT, "application/json")
-                    .header(CONTENT_LENGTH, "0")
-                    .body(body)
-                    .send()
-                    .map_err(backoff::Error::transient)
-            };
+            let url = format!(
+                "https://{}/v1/accounts/{}/orders",
+                self.base_url, self.account_id
+            );
+            let body = format!(
+                "account_id={}&class=equity&symbol={}&side={}&quantity={}&type=market&duration=day",
+                self.account_id, order.symbol, order.side, order.qty
+            );
 
-            let response: Result<OrderResponse, String> = retry(self.backoff.clone(), op)
-                .map_err::<String, _>(|e| e.to_string())
-                .and_then(|r| {
-                    r.json::<OrderResponse>()
-                        .map_err::<String, _>(|e| {
-                            format!("Could not parse body - note, this will occur on any error condition: {}", e.to_string())
-                        })
-                });
+            let response: Result<OrderResponse, String> =
+                post::<OrderResponse>(&url, &self.access_token, body);
 
             match response {
                 Ok(response) => match response.order.status.as_str() {
@@ -87,6 +74,41 @@ mod implementation {
                 Err(e) => Err(e),
             }
         }
+        // fn create_order_2(&self, order: Order) -> Result<Order, String> {
+        //     let op = || {
+        //         let url = format!(
+        //             "https://{}/v1/accounts/{}/orders",
+        //             self.base_url, self.account_id
+        //         );
+        //         let body = format!("account_id={}&class=equity&symbol={}&side={}&quantity={}&type=market&duration=day",
+        //             self.account_id, order.symbol, order.side, order.qty);
+        //         reqwest::blocking::Client::new()
+        //             .post(url)
+        //             .header(AUTHORIZATION, format!("Bearer {}", self.access_token))
+        //             .header(ACCEPT, "application/json")
+        //             .header(CONTENT_LENGTH, "0")
+        //             .body(body)
+        //             .send()
+        //             .map_err(backoff::Error::transient)
+        //     };
+
+        //     let response: Result<OrderResponse, String> = retry(self.backoff.clone(), op)
+        //         .map_err::<String, _>(|e| e.to_string())
+        //         .and_then(|r| {
+        //             r.json::<OrderResponse>()
+        //                 .map_err::<String, _>(|e| {
+        //                     format!("Could not parse body - note, this will occur on any error condition: {}", e.to_string())
+        //                 })
+        //         });
+
+        //     match response {
+        //         Ok(response) => match response.order.status.as_str() {
+        //             "ok" => Ok(order.with_id(response.order.id)),
+        //             _ => Err(response.order.status),
+        //         },
+        //         Err(e) => Err(e),
+        //     }
+        // }
     }
 }
 
