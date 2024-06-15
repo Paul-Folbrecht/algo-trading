@@ -23,3 +23,7 @@ symbols = ["SPY", "AAPL"]
 ## Running
 
 `cargo run <access-token>`
+
+## Testing
+
+`cargo test` requires the environment variable `TRADIER_ACCESS_TOKEN` to be set. (Yeah, that's naughty.)

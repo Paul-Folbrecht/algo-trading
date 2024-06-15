@@ -1,6 +1,7 @@
 use chrono::{DateTime, Local, NaiveDate};
 use core::serde::{tradier_date_format, tradier_date_time_format};
 use serde::Deserialize;
+use std::fmt::{Display, Formatter};
 
 use crate::serde::side_format;
 
@@ -51,6 +52,15 @@ pub enum OrderType {
 pub enum Side {
     Buy,
     Sell,
+}
+
+impl Display for Side {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Side::Buy => write!(f, "Buy"),
+            Side::Sell => write!(f, "Sell"),
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
