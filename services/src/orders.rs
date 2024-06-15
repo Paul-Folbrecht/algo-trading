@@ -7,10 +7,11 @@ pub trait OrderService {
     fn create_order(&self, order: Order) -> Result<Order, String>;
 }
 
-pub fn new(access_token: String, account_id: String) -> Arc<impl OrderService> {
+pub fn new(access_token: String, account_id: String, sandbox: bool) -> Arc<impl OrderService> {
     Arc::new(implementation::Orders {
         access_token,
         account_id,
+        sandbox,
     })
 }
 
@@ -23,6 +24,7 @@ mod implementation {
     pub struct Orders {
         pub access_token: String,
         pub account_id: String,
+        pub sandbox: bool,
     }
 
     #[derive(Deserialize)]
@@ -39,11 +41,12 @@ mod implementation {
     impl OrderService for Orders {
         fn create_order(&self, order: Order) -> Result<Order, String> {
             let op = || {
-                // @todo Configure sandbox vs. production
-                let url = format!(
-                    "https://sandbox.tradier.com/v1/accounts/{}/orders",
-                    self.account_id
-                );
+                let base = if self.sandbox {
+                    "sandbox.tradier.com"
+                } else {
+                    "api.tradier.com"
+                };
+                let url = format!("https://{}/v1/accounts/{}/orders", base, self.account_id);
                 let body = format!("account_id={}&class=equity&symbol={}&side={}&quantity={}&type=market&duration=day",
                     self.account_id, order.symbol, order.side, order.qty);
                 reqwest::blocking::Client::new()

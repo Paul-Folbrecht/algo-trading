@@ -72,7 +72,6 @@ pub struct Order {
     #[serde(with = "side_format")]
     pub side: Side,
     pub qty: i64,
-    pub price: f64,
 }
 
 impl Order {
