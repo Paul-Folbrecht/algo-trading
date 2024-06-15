@@ -142,23 +142,6 @@ mod implementation {
             }
         }
     }
-
-    use backoff::{retry, Error, ExponentialBackoff};
-    fn test(access_token: &str) -> Result<AuthResponse, String> {
-        let op = || {
-            reqwest::blocking::Client::new()
-                .post("https://blah.com")
-                .send()
-                .map_err(backoff::Error::transient)
-        };
-
-        retry(ExponentialBackoff::default(), op)
-            .map_err::<String, _>(|e| e.to_string())
-            .and_then(|r| {
-                r.json::<AuthResponse>()
-                    .map_err::<String, _>(|e| e.to_string())
-            })
-    }
 }
 
 #[cfg(test)]

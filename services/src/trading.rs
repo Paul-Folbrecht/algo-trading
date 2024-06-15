@@ -79,7 +79,7 @@ mod implementation {
         }
     }
 
-    fn load_history<'market_data>(
+    pub fn load_history<'market_data>(
         symbols: &'market_data Vec<String>,
         historical_data_service: Arc<impl HistoricalDataService + 'market_data>,
     ) -> HashMap<String, SymbolData> {
@@ -122,5 +122,5 @@ mod implementation {
 }
 
 #[cfg(test)]
-#[path = "./../tests/trading_test.rs"]
+#[path = "./tests/trading_test.rs"]
 mod trading_test;
