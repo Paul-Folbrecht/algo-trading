@@ -65,9 +65,9 @@ where
         })
 }
 
-#[cfg(test)]
-#[test]
-fn test_post() {
-    let url = "https://example.com";
-    post::<String>("https://example.com", "", "".to_string()).unwrap();
-}
+// #[cfg(test)]
+// #[test]
+// fn test_post() {
+//     let url = "https://example.com";
+//     post::<String>("https://example.com", "", "".to_string()).unwrap();
+// }

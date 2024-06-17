@@ -1,6 +1,6 @@
 use chrono::{DateTime, Local, NaiveDate};
 use core::serde::{tradier_date_format, tradier_date_time_format};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 use crate::serde::side_format;
@@ -63,7 +63,7 @@ impl Display for Side {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Order {
     pub tradier_id: Option<i64>,
     #[serde(with = "tradier_date_format")]

@@ -17,3 +17,4 @@ tungstenite = { version = "0.21.0", features = ["native-tls"] }
 chrono = "0.4.38"
 mongodb = "2.8.2"
 backoff = "0.4.0"
+tokio = "1.38.0"
