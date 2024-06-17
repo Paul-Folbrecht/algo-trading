@@ -118,7 +118,7 @@ impl StrategyHandler for Strategy {
                     );
 
                     let buy = quote.ask < data.mean - 2.0 * data.std_dev;
-                    let sell = quote.ask > data.mean + 2.0 * data.std_dev;
+                    let _sell = quote.ask > data.mean + 2.0 * data.std_dev;
 
                     // - Buy:
                     //   - If position qty < target_position_qty, buy the difference

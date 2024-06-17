@@ -36,11 +36,11 @@ mod implementation {
                     tokio::spawn(async move {
                         match orders.insert_one(document.to_owned(), None).await {
                             Ok(insert_result) => {
-                                let id = insert_result
+                                let mongo_id = insert_result
                                     .inserted_id
                                     .as_object_id()
                                     .expect("Retrieved _id should have been of type ObjectId");
-                                println!("Inserted order with id: {}", id);
+                                println!("Inserted order with id, mongo id: {}, {}", id, mongo_id);
                             }
                             Err(e) => {
                                 eprintln!("Error inserting order: {:?}; {:?}", e, id);
