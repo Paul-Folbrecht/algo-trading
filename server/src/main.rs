@@ -9,19 +9,20 @@ use std::{
 use config::AppConfig;
 use services::market_data::MarketDataService;
 use services::trading::TradingService;
-use services::{historical_data, market_data, trading};
+use services::{historical_data, market_data, orders, trading};
 
 mod config;
 
 fn main() {
     let config = AppConfig::new().expect("Could not load config");
     println!("Config:\n{:?}", config);
-    let args: Vec<String> = std::env::args().collect();
-    let access_token = &args[1];
-    let market_data_service = market_data::new(access_token.to_string());
-    let historical_data_service = historical_data::new(access_token.to_string());
-    let order_service = trading::orders::new(
-        access_token.to_string(),
+    // let args: Vec<String> = std::env::args().collect();
+    // let access_token = &args[1];
+    let access_token = config.access_token;
+    let market_data_service = market_data::new(access_token.clone());
+    let historical_data_service = historical_data::new(access_token.clone());
+    let order_service = orders::new(
+        access_token.clone(),
         config.account_id.clone(),
         config.sandbox,
     );

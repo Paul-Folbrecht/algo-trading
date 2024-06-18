@@ -12,6 +12,9 @@ pub struct Strategy {
 #[derive(Debug, Deserialize)]
 #[allow(unused)]
 pub struct AppConfig {
+    pub access_token: String,
+    pub account_id: String,
+    pub sandbox: bool,
     pub strategies: Vec<Strategy>,
 }
 
