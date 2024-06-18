@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::persistence::PersistenceService;
 use core::http::*;
 use domain::domain::*;
 
@@ -7,7 +8,12 @@ pub trait OrderService {
     fn create_order(&self, order: Order) -> Result<Order, String>;
 }
 
-pub fn new(access_token: String, account_id: String, sandbox: bool) -> Arc<impl OrderService> {
+pub fn new(
+    access_token: String,
+    account_id: String,
+    sandbox: bool,
+    persistence: Arc<impl PersistenceService + Send + Sync>,
+) -> Arc<impl OrderService> {
     Arc::new(implementation::Orders {
         access_token,
         account_id,
@@ -17,6 +23,7 @@ pub fn new(access_token: String, account_id: String, sandbox: bool) -> Arc<impl 
         } else {
             "api.tradier.com".into()
         },
+        persistence,
     })
 }
 
@@ -25,11 +32,12 @@ mod implementation {
 
     use super::*;
 
-    pub struct Orders {
+    pub struct Orders<P: PersistenceService + Send + Sync> {
         pub access_token: String,
         pub account_id: String,
         pub sandbox: bool,
         pub base_url: String,
+        pub persistence: Arc<P>,
     }
 
     #[derive(Deserialize)]
@@ -43,7 +51,7 @@ mod implementation {
         status: String,
     }
 
-    impl OrderService for Orders {
+    impl<P: PersistenceService + Send + Sync> OrderService for Orders<P> {
         fn create_order(&self, order: Order) -> Result<Order, String> {
             let url = format!(
                 "https://{}/v1/accounts/{}/orders",

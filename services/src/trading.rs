@@ -11,14 +11,14 @@ pub trait TradingService {
 pub fn new<'market_data>(
     strategy_name: String,
     symbols: &'market_data Vec<String>,
-    market_data_service: Arc<impl MarketDataService + 'market_data + Send + Sync>,
-    historical_data_service: Arc<impl HistoricalDataService + 'market_data + Send + Sync>,
+    market_data: Arc<impl MarketDataService + 'market_data + Send + Sync>,
+    historical_data: Arc<impl HistoricalDataService + 'market_data + Send + Sync>,
 ) -> impl TradingService + 'market_data {
     implementation::Trading {
         strategy_name,
         symbols,
-        market_data_service,
-        historical_data_service,
+        market_data_service: market_data,
+        historical_data_service: historical_data,
         thread_handle: None,
     }
 }

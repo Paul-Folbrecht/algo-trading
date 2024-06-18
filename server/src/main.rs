@@ -7,24 +7,26 @@ use std::{
 };
 
 use config::AppConfig;
-use services::market_data::MarketDataService;
+use services::persistence::PersistenceService;
 use services::trading::TradingService;
 use services::{historical_data, market_data, orders, trading};
+use services::{market_data::MarketDataService, persistence};
 
 mod config;
 
 fn main() {
     let config = AppConfig::new().expect("Could not load config");
     println!("Config:\n{:?}", config);
-    // let args: Vec<String> = std::env::args().collect();
-    // let access_token = &args[1];
+
     let access_token = config.access_token;
-    let market_data_service = market_data::new(access_token.clone());
-    let historical_data_service = historical_data::new(access_token.clone());
-    let order_service = orders::new(
+    let market_data = market_data::new(access_token.clone());
+    let historical_data = historical_data::new(access_token.clone());
+    let persistence = persistence::new();
+    let orders = orders::new(
         access_token.clone(),
         config.account_id.clone(),
         config.sandbox,
+        persistence.clone(),
     );
     let shutdown = Arc::new(AtomicBool::new(false));
     let mut symbols: HashSet<String> = HashSet::new();
@@ -34,8 +36,8 @@ fn main() {
         let mut trading_service = trading::new(
             strategy.name.clone(),
             strategy.symbols.as_ref(),
-            market_data_service.clone(),
-            historical_data_service.clone(),
+            market_data.clone(),
+            historical_data.clone(),
         );
         match trading_service.run() {
             Ok(_) => (),
@@ -43,9 +45,14 @@ fn main() {
         }
     });
 
-    let handle = market_data_service.init(shutdown, symbols.into_iter().collect());
-    match handle.unwrap().join() {
-        Ok(_) => println!("MarketDataService thread exited successfully"),
-        Err(e) => eprintln!("Error joining MarketDataService thread: {:?}", e),
+    let handle1 = persistence.init(shutdown.clone());
+    let handle2 = market_data.init(shutdown.clone(), symbols.into_iter().collect());
+    let handles = vec![handle1, handle2];
+    for handle in handles {
+        match handle.unwrap().join() {
+            Ok(_) => println!("Thread exited successfully"),
+            Err(e) => eprintln!("Error joining thread: {:?}", e),
+        }
     }
+    println!("All threads exited successfully");
 }
