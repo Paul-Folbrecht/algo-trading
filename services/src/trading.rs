@@ -61,8 +61,8 @@ mod implementation {
                     self.thread_handle = Some(std::thread::spawn(move || loop {
                         match rx.recv() {
                             Ok(quote) => {
-                                println!("TradingService received quote:\n{:?}", quote);
                                 if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
+                                    println!("TradingService received quote:\n{:?}", quote);
                                     strategy.handle(&quote, symbol_data);
                                 }
                             }

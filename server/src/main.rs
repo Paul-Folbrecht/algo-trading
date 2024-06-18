@@ -20,6 +20,11 @@ fn main() {
     let access_token = &args[1];
     let market_data_service = market_data::new(access_token.to_string());
     let historical_data_service = historical_data::new(access_token.to_string());
+    let order_service = trading::orders::new(
+        access_token.to_string(),
+        config.account_id.clone(),
+        config.sandbox,
+    );
     let shutdown = Arc::new(AtomicBool::new(false));
     let mut symbols: HashSet<String> = HashSet::new();
 

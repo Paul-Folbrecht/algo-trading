@@ -7,7 +7,7 @@ use domain::domain::Side::Buy;
 #[test]
 fn test_order_persistence() {
     let order = Order {
-        tradier_id: Some(100),
+        tradier_id: Some(0),
         date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
         side: Buy,
         symbol: "AAPL".to_string(),
@@ -21,4 +21,6 @@ fn test_order_persistence() {
     assert_eq!(result, ());
     thread::sleep(Duration::from_secs(1));
     shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
+    // Now go to the mongo shell and verify the order, homey
+    // And yes this is an integration test, not a unit test
 }

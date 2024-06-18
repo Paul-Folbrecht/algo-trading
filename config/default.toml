@@ -1,3 +1,7 @@
+sandbox = true
+access_token = ""
+account_id = ""
+
 [[strategies]]
 name = "mean-reversion"
 symbols = ["SPY", "AAPL"]

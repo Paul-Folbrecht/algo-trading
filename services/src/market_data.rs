@@ -1,4 +1,4 @@
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender};
 use domain::domain::Quote;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
@@ -98,7 +98,7 @@ mod implementation {
         }
 
         fn subscribe(&self) -> Result<Receiver<Quote>, String> {
-            let (sender, receiver) = unbounded();
+            let (sender, receiver) = crossbeam_channel::unbounded();
             let subscriber = receiver.clone();
             self.subscribers
                 .lock()

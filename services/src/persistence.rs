@@ -1,4 +1,4 @@
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender};
 use domain::domain::Order;
 use std::{
     sync::{atomic::AtomicBool, Arc},
@@ -11,7 +11,7 @@ pub trait PersistenceService {
 }
 
 pub fn new() -> Arc<impl PersistenceService> {
-    let (sender, receiver) = unbounded();
+    let (sender, receiver) = crossbeam_channel::unbounded();
     Arc::new(implementation::Persistence { sender, receiver })
 }
 
@@ -43,7 +43,7 @@ mod implementation {
 
                 while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
                     match writer.receiver.recv() {
-                        Ok(order) => match writer.write_order_impl(&order) {
+                        Ok(order) => match writer.write_order(&order) {
                             Ok(_) => {}
                             Err(e) => {
                                 eprintln!("Error writing order: {:?}", e);
@@ -64,7 +64,7 @@ mod implementation {
     }
 
     impl Writer {
-        fn write_order_impl(&self, order: &Order) -> Result<(), String> {
+        fn write_order(&self, order: &Order) -> Result<(), String> {
             let serialized = bson::to_bson(&order).map_err(|e| e.to_string())?;
             match serialized.as_document().map(|doc| doc.to_owned()) {
                 Some(document) => {
