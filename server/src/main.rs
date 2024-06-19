@@ -48,11 +48,11 @@ fn main() {
     let handle1 = persistence.init(shutdown.clone());
     let handle2 = market_data.init(shutdown.clone(), symbols.into_iter().collect());
     let handles = vec![handle1, handle2];
-    for handle in handles {
-        match handle.unwrap().join() {
+    handles
+        .into_iter()
+        .for_each(|handle| match handle.unwrap().join() {
             Ok(_) => println!("Thread exited successfully"),
             Err(e) => eprintln!("Error joining thread: {:?}", e),
-        }
-    }
+        });
     println!("All threads exited successfully");
 }

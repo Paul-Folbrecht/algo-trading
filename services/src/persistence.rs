@@ -1,5 +1,5 @@
 use crossbeam_channel::{Receiver, Sender};
-use domain::domain::Order;
+use domain::domain::{Order, Persistable, Position};
 use std::{
     sync::{atomic::AtomicBool, Arc},
     thread::JoinHandle,
@@ -8,6 +8,8 @@ use std::{
 pub trait PersistenceService {
     fn init(&self, shutdown: Arc<AtomicBool>) -> Result<JoinHandle<()>, String>;
     fn write_order(&self, order: Order) -> Result<(), String>;
+    fn write_position(&self, position: Position) -> Result<(), String>;
+    fn read_positions(&self) -> Result<Vec<Position>, String>;
 }
 
 pub fn new() -> Arc<impl PersistenceService> {
@@ -16,12 +18,13 @@ pub fn new() -> Arc<impl PersistenceService> {
 }
 
 mod implementation {
+    use std::any::Any;
+
+    use super::*;
     use mongodb::{
         bson::{self},
         sync::Client,
     };
-
-    use super::*;
 
     pub struct Persistence {
         pub sender: Sender<Order>,
@@ -61,9 +64,24 @@ mod implementation {
         fn write_order(&self, order: Order) -> Result<(), String> {
             self.sender.send(order.clone()).map_err(|e| e.to_string())
         }
+
+        fn write_position(&self, position: Position) -> Result<(), String> {
+            unimplemented!()
+        }
+
+        fn read_positions(&self) -> Result<Vec<Position>, String> {
+            unimplemented!()
+        }
     }
 
     impl Writer {
+        fn write(&self, p: Box<dyn Persistable>) -> Result<(), String> {
+            let _: &Order = match p.as_any().downcast_ref::<Order>() {
+                Some(b) => b,
+                None => panic!("&a isn't a B!"),
+            };
+        }
+
         fn write_order(&self, order: &Order) -> Result<(), String> {
             let serialized = bson::to_bson(&order).map_err(|e| e.to_string())?;
             match serialized.as_document().map(|doc| doc.to_owned()) {

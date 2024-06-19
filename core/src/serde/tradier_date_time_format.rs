@@ -1,6 +1,13 @@
 use chrono::{DateTime, Local, Utc};
 use serde::{self, Deserialize, Deserializer};
 
+pub fn serialize<S>(date: &DateTime<Local>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_i64(date.timestamp_millis())
+}
+
 pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Local>, D::Error>
 where
     D: Deserializer<'de>,

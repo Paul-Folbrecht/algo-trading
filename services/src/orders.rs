@@ -28,9 +28,8 @@ pub fn new(
 }
 
 mod implementation {
-    use serde::Deserialize;
-
     use super::*;
+    use serde::Deserialize;
 
     pub struct Orders<P: PersistenceService + Send + Sync> {
         pub access_token: String,

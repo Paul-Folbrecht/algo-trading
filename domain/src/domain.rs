@@ -1,7 +1,10 @@
 use chrono::{DateTime, Local, NaiveDate};
 use core::serde::{tradier_date_format, tradier_date_time_format};
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+use std::{
+    any::Any,
+    fmt::{Display, Formatter},
+};
 
 use crate::serde::side_format;
 
@@ -63,6 +66,10 @@ impl Display for Side {
     }
 }
 
+pub trait Persistable {
+    fn as_any(&self) -> &dyn Any;
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Order {
     pub tradier_id: Option<i64>,
@@ -72,6 +79,18 @@ pub struct Order {
     #[serde(with = "side_format")]
     pub side: Side,
     pub qty: i64,
+}
+
+impl Persistable for Order {}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Position {
+    pub id: i64,
+    pub symbol: String,
+    pub quantity: f64,
+    pub cost_basis: f64,
+    #[serde(with = "tradier_date_time_format")]
+    pub date_acquired: DateTime<Local>,
 }
 
 impl Order {
