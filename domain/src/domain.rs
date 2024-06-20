@@ -126,8 +126,14 @@ pub enum Strategy {
     MeanReversion { symbols: Vec<String> },
 }
 
+pub enum Signal {
+    Buy,
+    Sell,
+    None,
+}
+
 pub trait StrategyHandler {
-    fn handle(&self, quote: &Quote, data: &SymbolData);
+    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String>;
 }
 
 impl Strategy {
@@ -140,7 +146,7 @@ impl Strategy {
 }
 
 impl StrategyHandler for Strategy {
-    fn handle(&self, quote: &Quote, data: &SymbolData) {
+    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String> {
         match self {
             Strategy::MeanReversion { symbols } => {
                 if symbols.contains(&quote.symbol) {
@@ -156,21 +162,21 @@ impl StrategyHandler for Strategy {
                     );
 
                     let buy = quote.ask < data.mean - 2.0 * data.std_dev;
-                    let _sell = quote.ask > data.mean + 2.0 * data.std_dev;
+                    let sell = quote.ask > data.mean + 2.0 * data.std_dev;
 
-                    // - Buy:
-                    //   - If position qty < target_position_qty, buy the difference
-                    //   - Else log
-                    // - Sell:
-                    //   - If we have a position, unwind
-                    //   - Else log
-                    // - target_position_qty:
-                    //   - Config capital per symbol
                     if buy {
                         println!("***Buy signal for {}***", quote.symbol);
+                        return Ok(Signal::Buy);
+                    } else if sell {
+                        println!("***Sell signal for {}***", quote.symbol);
+                        return Ok(Signal::Sell);
                     } else {
                         println!("No signal for {}", quote.symbol);
+                        return Ok(Signal::None);
                     }
+                } else {
+                    println!("Symbol {} not in strategy", quote.symbol);
+                    return Ok(Signal::None);
                 }
             }
         }

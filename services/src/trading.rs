@@ -61,10 +61,7 @@ mod implementation {
                     self.thread_handle = Some(std::thread::spawn(move || loop {
                         match rx.recv() {
                             Ok(quote) => {
-                                if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
-                                    println!("TradingService received quote:\n{:?}", quote);
-                                    strategy.handle(&quote, symbol_data);
-                                }
+                                handle_quote(&symbol_data, quote, &strategy);
                             }
                             Err(e) => {
                                 eprintln!("Error on receive!: {}", e);
@@ -76,6 +73,25 @@ mod implementation {
                 Err(e) => return Err(format!("Failed to subscribe to MarketDataService: {}", e)),
             }
             Ok(())
+        }
+    }
+
+    fn handle_quote(symbol_data: &HashMap<String, SymbolData>, quote: Quote, strategy: &Strategy) {
+        if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
+            println!("TradingService received quote:\n{:?}", quote);
+            let signal = strategy.handle(&quote, symbol_data);
+            match signal {
+                Ok(Signal::Buy) => {
+                    //   - If position qty < target_position_qty, buy the difference
+                }
+                Ok(Signal::Sell) => {
+                    //   - If we have a position, unwind
+                }
+                Ok(Signal::None) => {}
+                Err(e) => {
+                    eprintln!("Error from strategy: {}", e);
+                }
+            }
         }
     }
 
