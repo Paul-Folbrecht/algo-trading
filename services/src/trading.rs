@@ -57,7 +57,8 @@ mod implementation {
                 "Running TradingService with strategy: {:?}",
                 self.strategy_name
             );
-            let symbol_data = load_history(&self.symbols, self.historical_data.clone());
+            let symbol_data: HashMap<String, SymbolData> =
+                load_history(&self.symbols, self.historical_data.clone());
             let orders: Arc<O> = self.orders.clone();
 
             match self.market_data.subscribe() {
@@ -66,7 +67,15 @@ mod implementation {
                     let strategy = Strategy::new(&self.strategy_name, self.symbols.clone());
 
                     self.thread_handle = Some(std::thread::spawn(move || loop {
-                        handle_quote(&rx, &orders);
+                        match rx.recv() {
+                            Ok(quote) => {
+                                println!("TradingService received quote:\n{:?}", quote);
+                                handle_quote(&symbol_data, &quote, &strategy, orders.clone());
+                            }
+                            Err(e) => {
+                                eprintln!("Error on receive!: {}", e);
+                            }
+                        }
                     }));
                 }
 
@@ -77,63 +86,68 @@ mod implementation {
     }
 
     fn handle_quote<O: OrderService + Send + Sync>(
-        rx: &crossbeam_channel::Receiver<Quote>,
-        orders: &Arc<O>,
+        symbol_data: &HashMap<String, SymbolData>,
+        quote: &Quote,
+        strategy: &Strategy,
+        orders: Arc<O>,
     ) {
-        match rx.recv() {
-            Ok(quote) => {
-                let order = Order {
-                    symbol: quote.symbol.clone(),
-                    qty: 1,
-                    date: Local::now().naive_local().date(),
-                    side: Side::Buy,
-                    tradier_id: None,
-                };
-                orders.create_order(order);
-            }
-            Err(e) => {
-                eprintln!("Error on receive!: {}", e);
+        if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
+            let signal = strategy.handle(&quote, symbol_data);
+            match signal {
+                Ok(Signal::Buy) => {
+                    //   - If position qty < target_position_qty, buy the difference
+                    let order = Order {
+                        symbol: quote.symbol.clone(),
+                        qty: 1,
+                        date: Local::now().naive_local().date(),
+                        side: Side::Buy,
+                        tradier_id: None,
+                    };
+                    orders.create_order(order);
+                }
+                Ok(Signal::Sell) => {
+                    //   - If we have a position, unwind
+                }
+                Ok(Signal::None) => {}
+                Err(e) => {
+                    eprintln!("Error from strategy: {}", e);
+                }
             }
         }
     }
 
-    // fn handle_quote<'static, O: OrderService + Send + Sync + 'static>(
-    //     symbol_data: &HashMap<String, SymbolData>,
-    //     quote: Quote,
-    //     strategy: &Strategy,
-    //     orders: Arc<O>,
+    // fn handle_quote<O: OrderService + Send + Sync>(
+    //     rx: &crossbeam_channel::Receiver<Quote>,
+    //     orders: &Arc<O>,
     // ) {
-    //     if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
-    //         println!("TradingService received quote:\n{:?}", quote);
-    //         let signal = strategy.handle(&quote, symbol_data);
-    //         match signal {
-    //             Ok(Signal::Buy) => {
-    //                 //   - If position qty < target_position_qty, buy the difference
-    //             }
-    //             Ok(Signal::Sell) => {
-    //                 //   - If we have a position, unwind
-    //             }
-    //             Ok(Signal::None) => {}
-    //             Err(e) => {
-    //                 eprintln!("Error from strategy: {}", e);
-    //             }
+    //     match rx.recv() {
+    //         Ok(quote) => {
+    //             let order = Order {
+    //                 symbol: quote.symbol.clone(),
+    //                 qty: 1,
+    //                 date: Local::now().naive_local().date(),
+    //                 side: Side::Buy,
+    //                 tradier_id: None,
+    //             };
+    //             orders.create_order(order);
+    //         }
+    //         Err(e) => {
+    //             eprintln!("Error on receive!: {}", e);
     //         }
     //     }
     // }
 
     // impl<
-    //         'static,
     //         M: MarketDataService + Send + Sync,
     //         H: HistoricalDataService + Send + Sync,
     //         O: OrderService + Send + Sync,
-    //     > Trading<'static, M, H, O>
+    //     > Trading<M, H, O>
     // {
     //     fn handle_quote(
     //         &self,
     //         symbol_data: &HashMap<String, SymbolData>,
     //         quote: Quote,
     //         strategy: &Strategy,
-    //         orders: O,
     //     ) {
     //         if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
     //             println!("TradingService received quote:\n{:?}", quote);
@@ -141,6 +155,14 @@ mod implementation {
     //             match signal {
     //                 Ok(Signal::Buy) => {
     //                     //   - If position qty < target_position_qty, buy the difference
+    //                     let order = Order {
+    //                         symbol: quote.symbol.clone(),
+    //                         qty: 1,
+    //                         date: Local::now().naive_local().date(),
+    //                         side: Side::Buy,
+    //                         tradier_id: None,
+    //                     };
+    //                     self.orders.create_order(order);
     //                 }
     //                 Ok(Signal::Sell) => {
     //                     //   - If we have a position, unwind

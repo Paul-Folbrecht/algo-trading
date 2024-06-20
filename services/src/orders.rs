@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::persistence::PersistenceService;
 use core::http::*;
 use domain::domain::*;
+use std::{collections::HashMap, sync::Mutex};
 
 pub trait OrderService {
     fn create_order(&self, order: Order) -> Result<Order, String>;
@@ -13,18 +14,22 @@ pub fn new(
     account_id: String,
     sandbox: bool,
     persistence: Arc<impl PersistenceService + Send + Sync>,
-) -> Arc<impl OrderService> {
-    Arc::new(implementation::Orders {
+) -> Result<Arc<impl OrderService>, String> {
+    let base_url = if sandbox {
+        "sandbox.tradier.com".into()
+    } else {
+        "api.tradier.com".into()
+    };
+    let positions = implementation::read_positions(base_url, &access_token, &account_id)?;
+
+    Ok(Arc::new(implementation::Orders {
         access_token,
         account_id,
         sandbox,
-        base_url: if sandbox {
-            "sandbox.tradier.com".into()
-        } else {
-            "api.tradier.com".into()
-        },
+        base_url: base_url.to_string(),
         persistence,
-    })
+        positions: Arc::new(Mutex::new(positions)),
+    }))
 }
 
 mod implementation {
@@ -37,6 +42,7 @@ mod implementation {
         pub sandbox: bool,
         pub base_url: String,
         pub persistence: Arc<P>,
+        pub positions: Arc<Mutex<HashMap<String, Position>>>,
     }
 
     #[derive(Deserialize)]
@@ -60,9 +66,7 @@ mod implementation {
                 "account_id={}&class=equity&symbol={}&side={}&quantity={}&type=market&duration=day",
                 self.account_id, order.symbol, order.side, order.qty
             );
-
-            let response: Result<OrderResponse, String> =
-                post::<OrderResponse>(&url, &self.access_token, body);
+            let response = post::<OrderResponse>(&url, &self.access_token, body);
 
             match response {
                 Ok(response) => match response.order.status.as_str() {
@@ -71,6 +75,40 @@ mod implementation {
                 },
                 Err(e) => Err(e),
             }
+        }
+    }
+
+    #[derive(Deserialize)]
+    struct PositionResponse {
+        positions: Positions,
+    }
+
+    #[derive(Deserialize)]
+    struct Positions {
+        positions: Vec<Position>,
+    }
+
+    pub fn read_positions(
+        base_url: &str,
+        access_token: &str,
+        account_id: &str,
+    ) -> Result<HashMap<String, Position>, String> {
+        let url = format!("https://{}/v1/accounts/{}/positions", base_url, account_id);
+        let response = get::<PositionResponse>(&url, &access_token);
+
+        match response {
+            Ok(response) => {
+                let mut positions = HashMap::new();
+                response
+                    .positions
+                    .positions
+                    .into_iter()
+                    .for_each(|position| {
+                        positions.insert(position.symbol.clone(), position);
+                    });
+                Ok(positions)
+            }
+            Err(e) => Err(e),
         }
     }
 }

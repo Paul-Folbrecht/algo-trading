@@ -27,7 +27,8 @@ fn main() {
         config.account_id.clone(),
         config.sandbox,
         persistence.clone(),
-    );
+    )
+    .expect("Failed to create OrdersService");
     let shutdown = Arc::new(AtomicBool::new(false));
     let mut symbols: HashSet<String> = HashSet::new();
 
