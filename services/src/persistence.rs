@@ -7,8 +7,7 @@ use std::{
 
 pub trait PersistenceService {
     fn init(&self, shutdown: Arc<AtomicBool>) -> Result<JoinHandle<()>, String>;
-    fn write_order(&self, order: Order) -> Result<(), String>;
-    fn write_position(&self, position: Position) -> Result<(), String>;
+    fn write(&self, p: Box<dyn Persistable + Send>) -> Result<(), String>;
     fn read_positions(&self) -> Result<Vec<Position>, String>;
 }
 
@@ -22,18 +21,18 @@ mod implementation {
 
     use super::*;
     use mongodb::{
-        bson::{self},
+        bson::{self, Bson},
         sync::Client,
     };
 
     pub struct Persistence {
-        pub sender: Sender<Order>,
-        pub receiver: Receiver<Order>,
+        pub sender: Sender<Box<dyn Persistable + Send>>,
+        pub receiver: Receiver<Box<dyn Persistable + Send>>,
     }
 
     pub struct Writer {
         pub client: Client,
-        pub receiver: Receiver<Order>,
+        pub receiver: Receiver<Box<dyn Persistable + Send>>,
     }
 
     impl PersistenceService for Persistence {
@@ -46,7 +45,7 @@ mod implementation {
 
                 while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
                     match writer.receiver.recv() {
-                        Ok(order) => match writer.write_order(&order) {
+                        Ok(p) => match writer.write(p) {
                             Ok(_) => {}
                             Err(e) => {
                                 eprintln!("Error writing order: {:?}", e);
@@ -61,12 +60,8 @@ mod implementation {
             Ok(handle)
         }
 
-        fn write_order(&self, order: Order) -> Result<(), String> {
-            self.sender.send(order.clone()).map_err(|e| e.to_string())
-        }
-
-        fn write_position(&self, position: Position) -> Result<(), String> {
-            unimplemented!()
+        fn write(&self, p: Box<dyn Persistable + Send>) -> Result<(), String> {
+            self.sender.send(p).map_err(|e| e.to_string())
         }
 
         fn read_positions(&self) -> Result<Vec<Position>, String> {
@@ -76,19 +71,25 @@ mod implementation {
 
     impl Writer {
         fn write(&self, p: Box<dyn Persistable>) -> Result<(), String> {
-            let _: &Order = match p.as_any().downcast_ref::<Order>() {
-                Some(b) => b,
-                None => panic!("&a isn't a B!"),
-            };
+            if let Some(order) = p.as_any().downcast_ref::<Order>() {
+                let serialized = bson::to_bson(&order).map_err(|e| e.to_string())?;
+                self.write_impl("orders", order.id(), &serialized)
+            } else if let Some(position) = p.as_any().downcast_ref::<Position>() {
+                let serialized = bson::to_bson(&position).map_err(|e| e.to_string())?;
+                self.write_impl("positions", position.id(), &serialized)
+            } else {
+                Err(format!("Cannot handle unknown type: {:?}", p.type_id()))
+            }
         }
 
-        fn write_order(&self, order: &Order) -> Result<(), String> {
-            let serialized = bson::to_bson(&order).map_err(|e| e.to_string())?;
-            match serialized.as_document().map(|doc| doc.to_owned()) {
+        fn write_impl(&self, collection_name: &str, id: i64, object: &Bson) -> Result<(), String> {
+            match object.as_document().map(|doc| doc.to_owned()) {
                 Some(document) => {
-                    let orders = self.client.database("algo-trading").collection("orders");
-                    let id = order.tradier_id.unwrap();
-                    match orders.insert_one(document.to_owned(), None) {
+                    let collection = self
+                        .client
+                        .database("algo-trading")
+                        .collection(collection_name);
+                    match collection.insert_one(document.to_owned(), None) {
                         Ok(insert_result) => {
                             let mongo_id = insert_result.inserted_id.as_object_id().expect(
                                 format!("Cast to ObjectId failed; order id: {:?}", id).as_str(),

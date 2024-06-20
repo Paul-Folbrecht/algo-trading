@@ -17,7 +17,7 @@ fn test_order_persistence() {
     let db = persistence::new();
     let shutdown = Arc::new(AtomicBool::new(false));
     db.init(shutdown.clone()).expect("Persistence init failed");
-    let result = db.write_order(order).expect("Write order failed");
+    let result = db.write(Box::new(order)).expect("Write order failed");
     assert_eq!(result, ());
     thread::sleep(Duration::from_secs(1));
     shutdown.store(true, std::sync::atomic::Ordering::Relaxed);

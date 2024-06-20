@@ -68,6 +68,7 @@ impl Display for Side {
 
 pub trait Persistable {
     fn as_any(&self) -> &dyn Any;
+    fn id(&self) -> i64;
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -81,7 +82,24 @@ pub struct Order {
     pub qty: i64,
 }
 
-impl Persistable for Order {}
+impl Persistable for Order {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn id(&self) -> i64 {
+        self.tradier_id.unwrap_or(0)
+    }
+}
+
+impl Order {
+    pub fn with_id(&self, tradier_id: i64) -> Self {
+        Order {
+            tradier_id: Some(tradier_id),
+            ..self.clone()
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Position {
@@ -93,12 +111,13 @@ pub struct Position {
     pub date_acquired: DateTime<Local>,
 }
 
-impl Order {
-    pub fn with_id(&self, tradier_id: i64) -> Self {
-        Order {
-            tradier_id: Some(tradier_id),
-            ..self.clone()
-        }
+impl Persistable for Position {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn id(&self) -> i64 {
+        self.id
     }
 }
 

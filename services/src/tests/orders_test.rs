@@ -1,3 +1,5 @@
+use crate::persistence;
+
 use super::*;
 use chrono::Local;
 
@@ -5,7 +7,8 @@ use chrono::Local;
 fn test_create_order() {
     let access_token = std::env::var("TRADIER_ACCESS_TOKEN").unwrap();
     let account_id = std::env::var("TRADIER_ACCOUNT_ID").unwrap();
-    let service = new(access_token, account_id, true);
+    let persistence = persistence::new();
+    let service = new(access_token, account_id, true, persistence);
     let order = Order {
         tradier_id: None,
         date: Local::now().naive_local().date(),
