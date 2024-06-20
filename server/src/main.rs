@@ -31,13 +31,14 @@ fn main() {
     let shutdown = Arc::new(AtomicBool::new(false));
     let mut symbols: HashSet<String> = HashSet::new();
 
-    config.strategies.iter().for_each(|strategy| {
+    config.strategies.into_iter().for_each(|strategy| {
         symbols.extend(strategy.symbols.clone());
         let mut trading_service = trading::new(
             strategy.name.clone(),
-            strategy.symbols.as_ref(),
+            strategy.symbols.clone(),
             market_data.clone(),
             historical_data.clone(),
+            orders.clone(),
         );
         match trading_service.run() {
             Ok(_) => (),
