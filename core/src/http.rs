@@ -7,6 +7,13 @@ use serde::de::DeserializeOwned;
 
 pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
     let op = || {
+        let r = reqwest::blocking::Client::new()
+            .get(url)
+            .headers(headers(token))
+            .send()
+            .map_err(backoff::Error::transient);
+        println!("\n\n\nresponse:\n{:?}", r.unwrap().text());
+
         reqwest::blocking::Client::new()
             .post(url)
             .headers(headers(token))

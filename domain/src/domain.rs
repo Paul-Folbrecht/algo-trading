@@ -79,7 +79,7 @@ pub struct Order {
     pub symbol: String,
     #[serde(with = "side_format")]
     pub side: Side,
-    pub qty: i64,
+    pub quantity: i64,
 }
 
 impl Persistable for Order {
@@ -103,12 +103,28 @@ impl Order {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Position {
-    pub id: i64,
+    pub tradier_id: Option<i64>,
     pub symbol: String,
-    pub quantity: f64,
+    pub quantity: i64,
     pub cost_basis: f64,
     #[serde(with = "tradier_date_time_format")]
     pub date_acquired: DateTime<Local>,
+}
+
+impl Position {
+    pub fn with_id(&self, tradier_id: i64) -> Self {
+        Position {
+            //            tradier_id: Some(tradier_id),
+            ..self.clone()
+        }
+    }
+
+    pub fn with_cost_basis(&self, cost_basis: f64) -> Self {
+        Position {
+            cost_basis,
+            ..self.clone()
+        }
+    }
 }
 
 impl Persistable for Position {
@@ -117,7 +133,7 @@ impl Persistable for Position {
     }
 
     fn id(&self) -> i64 {
-        self.id
+        0 //self.tradier_id.unwrap_or(0)
     }
 }
 
@@ -171,7 +187,6 @@ impl StrategyHandler for Strategy {
                         println!("***Sell signal for {}***", quote.symbol);
                         return Ok(Signal::Sell);
                     } else {
-                        println!("No signal for {}", quote.symbol);
                         return Ok(Signal::None);
                     }
                 } else {

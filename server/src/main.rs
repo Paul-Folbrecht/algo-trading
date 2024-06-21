@@ -19,16 +19,27 @@ fn main() {
     println!("Config:\n{:?}", config);
 
     let access_token = config.access_token;
+    let sandbox_token = config.sandbox_token;
     let market_data = market_data::new(access_token.clone());
     let historical_data = historical_data::new(access_token.clone());
     let persistence = persistence::new();
-    let orders = orders::new(
-        access_token.clone(),
-        config.account_id.clone(),
-        config.sandbox,
-        persistence.clone(),
-    )
-    .expect("Failed to create OrdersService");
+    let orders = if config.sandbox {
+        orders::new(
+            sandbox_token.clone(),
+            config.account_id.clone(),
+            "sandbox.tradier.com".into(),
+            persistence.clone(),
+        )
+        .expect("Failed to create OrdersService")
+    } else {
+        orders::new(
+            access_token.clone(),
+            config.account_id.clone(),
+            "api.tradier.com".into(),
+            persistence.clone(),
+        )
+        .expect("Failed to create OrdersService")
+    };
     let shutdown = Arc::new(AtomicBool::new(false));
     let mut symbols: HashSet<String> = HashSet::new();
 

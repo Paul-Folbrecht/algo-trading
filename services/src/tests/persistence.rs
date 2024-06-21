@@ -11,7 +11,7 @@ fn test_order_persistence() {
         date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
         side: Buy,
         symbol: "AAPL".to_string(),
-        qty: 100,
+        quantity: 100,
     };
 
     let db = persistence::new();

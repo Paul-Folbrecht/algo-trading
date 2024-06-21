@@ -7,26 +7,21 @@ use std::{collections::HashMap, sync::Mutex};
 
 pub trait OrderService {
     fn create_order(&self, order: Order) -> Result<Order, String>;
+    fn get_position(&self, symbol: &str) -> Option<Position>;
 }
 
 pub fn new(
     access_token: String,
     account_id: String,
-    sandbox: bool,
+    base_url: String,
     persistence: Arc<impl PersistenceService + Send + Sync>,
 ) -> Result<Arc<impl OrderService>, String> {
-    let base_url = if sandbox {
-        "sandbox.tradier.com".into()
-    } else {
-        "api.tradier.com".into()
-    };
-    let positions = implementation::read_positions(base_url, &access_token, &account_id)?;
+    let positions = implementation::read_positions(&base_url, &access_token, &account_id)?;
 
     Ok(Arc::new(implementation::Orders {
         access_token,
         account_id,
-        sandbox,
-        base_url: base_url.to_string(),
+        base_url,
         persistence,
         positions: Arc::new(Mutex::new(positions)),
     }))
@@ -34,12 +29,12 @@ pub fn new(
 
 mod implementation {
     use super::*;
+    use chrono::Local;
     use serde::Deserialize;
 
     pub struct Orders<P: PersistenceService + Send + Sync> {
         pub access_token: String,
         pub account_id: String,
-        pub sandbox: bool,
         pub base_url: String,
         pub persistence: Arc<P>,
         pub positions: Arc<Mutex<HashMap<String, Position>>>,
@@ -64,17 +59,36 @@ mod implementation {
             );
             let body = format!(
                 "account_id={}&class=equity&symbol={}&side={}&quantity={}&type=market&duration=day",
-                self.account_id, order.symbol, order.side, order.qty
+                self.account_id, order.symbol, order.side, order.quantity
             );
             let response = post::<OrderResponse>(&url, &self.access_token, body);
-
             match response {
                 Ok(response) => match response.order.status.as_str() {
-                    "ok" => Ok(order.with_id(response.order.id)),
+                    "ok" => {
+                        self.persistence.write(Box::new(order.clone()));
+                        self.persistence
+                            .write(Box::new(position_from(&order).clone()));
+                        Ok(order.with_id(response.order.id))
+                    }
                     _ => Err(response.order.status),
                 },
                 Err(e) => Err(e),
             }
+        }
+
+        fn get_position(&self, symbol: &str) -> Option<Position> {
+            let positions = self.positions.lock().unwrap();
+            positions.get(symbol).cloned()
+        }
+    }
+
+    fn position_from(order: &Order) -> Position {
+        Position {
+            tradier_id: None,
+            symbol: order.symbol.clone(),
+            quantity: order.quantity,
+            cost_basis: 0.0,
+            date_acquired: Local::now(),
         }
     }
 
@@ -85,7 +99,7 @@ mod implementation {
 
     #[derive(Deserialize)]
     struct Positions {
-        positions: Vec<Position>,
+        position: Vec<Position>,
     }
 
     pub fn read_positions(
@@ -94,6 +108,7 @@ mod implementation {
         account_id: &str,
     ) -> Result<HashMap<String, Position>, String> {
         let url = format!("https://{}/v1/accounts/{}/positions", base_url, account_id);
+        println!("url: {}", url);
         let response = get::<PositionResponse>(&url, &access_token);
 
         match response {
@@ -101,7 +116,7 @@ mod implementation {
                 let mut positions = HashMap::new();
                 response
                     .positions
-                    .positions
+                    .position
                     .into_iter()
                     .for_each(|position| {
                         positions.insert(position.symbol.clone(), position);

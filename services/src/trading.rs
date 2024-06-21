@@ -98,7 +98,7 @@ mod implementation {
                     //   - If position qty < target_position_qty, buy the difference
                     let order = Order {
                         symbol: quote.symbol.clone(),
-                        qty: 1,
+                        quantity: 0,
                         date: Local::now().naive_local().date(),
                         side: Side::Buy,
                         tradier_id: None,

@@ -13,6 +13,7 @@ pub struct Strategy {
 #[allow(unused)]
 pub struct AppConfig {
     pub access_token: String,
+    pub sandbox_token: String,
     pub account_id: String,
     pub sandbox: bool,
     pub strategies: Vec<Strategy>,
