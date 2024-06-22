@@ -47,7 +47,7 @@ mod implementation {
                         Ok(p) => match writer.write(p) {
                             Ok(_) => {}
                             Err(e) => {
-                                eprintln!("Error writing order: {:?}", e);
+                                eprintln!("Error writing object: {:?}", e);
                             }
                         },
                         Err(e) => {
@@ -93,13 +93,10 @@ mod implementation {
                             let mongo_id = insert_result.inserted_id.as_object_id().expect(
                                 format!("Cast to ObjectId failed; order id: {:?}", id).as_str(),
                             );
-                            println!(
-                                "Inserted order with order id, mongo id: {}, {}",
-                                id, mongo_id
-                            );
+                            println!("Inserted object with id, mongo id: {}, {}", id, mongo_id);
                         }
                         Err(e) => {
-                            eprintln!("Error inserting order: {:?}; {:?}", e, id);
+                            eprintln!("Error inserting object: {:?}; {:?}", e, id);
                         }
                     };
                     Ok(())

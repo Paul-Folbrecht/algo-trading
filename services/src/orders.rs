@@ -67,18 +67,19 @@ mod implementation {
             match response {
                 Ok(response) => match response.order.status.as_str() {
                     "ok" => {
-                        match self.persistence.write(Box::new(order.clone())) {
+                        let new_order = order.with_id(response.order.id);
+                        match self.persistence.write(Box::new(new_order.clone())) {
                             Ok(_) => {}
                             Err(e) => eprintln!("Error writing order to persistence: {}", e),
                         }
                         match self
                             .persistence
-                            .write(Box::new(position_from(&order).clone()))
+                            .write(Box::new(position_from(&new_order).clone()))
                         {
                             Ok(_) => {}
                             Err(e) => eprintln!("Error writing position to persistence: {}", e),
                         }
-                        Ok(order.with_id(response.order.id))
+                        Ok(new_order)
                     }
                     _ => Err(response.order.status),
                 },

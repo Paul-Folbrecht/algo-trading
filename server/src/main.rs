@@ -48,6 +48,7 @@ fn main() {
         let mut trading_service = trading::new(
             strategy.name.clone(),
             strategy.symbols.clone(),
+            strategy.capital.clone(),
             market_data.clone(),
             historical_data.clone(),
             orders.clone(),

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::historical_data::HistoricalDataService;
@@ -12,6 +13,7 @@ pub trait TradingService {
 pub fn new(
     strategy_name: String,
     symbols: Vec<String>,
+    capital: HashMap<String, i64>,
     market_data: Arc<impl MarketDataService + 'static + Send + Sync>,
     historical_data: Arc<impl HistoricalDataService + 'static + Send + Sync>,
     orders: Arc<impl OrderService + 'static + Send + Sync>,
@@ -19,6 +21,7 @@ pub fn new(
     implementation::Trading {
         strategy_name,
         symbols,
+        capital,
         market_data,
         historical_data,
         orders,
@@ -40,6 +43,7 @@ mod implementation {
     > {
         pub strategy_name: String,
         pub symbols: Vec<String>,
+        pub capital: HashMap<String, i64>,
         pub market_data: Arc<M>,
         pub historical_data: Arc<H>,
         pub orders: Arc<O>,
@@ -65,12 +69,20 @@ mod implementation {
                 Ok(rx) => {
                     println!("TradingService subscribed to MarketDataService");
                     let strategy = Strategy::new(&self.strategy_name, self.symbols.clone());
+                    let capital = self.capital.clone();
 
                     self.thread_handle = Some(std::thread::spawn(move || loop {
                         match rx.recv() {
                             Ok(quote) => {
+                                let symbol_capital = capital.get(&quote.symbol).unwrap_or(&0);
                                 println!("TradingService received quote:\n{:?}", quote);
-                                handle_quote(&symbol_data, &quote, &strategy, orders.clone());
+                                handle_quote(
+                                    &symbol_data,
+                                    &quote,
+                                    *symbol_capital,
+                                    &strategy,
+                                    orders.clone(),
+                                );
                             }
                             Err(e) => {
                                 eprintln!("Channel shut down: {}", e);
@@ -88,6 +100,7 @@ mod implementation {
     fn handle_quote<O: OrderService + Send + Sync>(
         symbol_data: &HashMap<String, SymbolData>,
         quote: &Quote,
+        capital: i64,
         strategy: &Strategy,
         orders: Arc<O>,
     ) {
@@ -95,25 +108,56 @@ mod implementation {
             let signal = strategy.handle(&quote, symbol_data);
             let maybe_position = orders.get_position(&quote.symbol);
 
-            match signal {
+            let order: Option<Order> = match signal {
                 Ok(Signal::Buy) => {
-                    //   - If position qty < target_position_qty, buy the difference up to capital
-                    let order = Order {
-                        symbol: quote.symbol.clone(),
-                        quantity: 0,
-                        date: Local::now().naive_local().date(),
-                        side: Side::Buy,
-                        tradier_id: None,
-                    };
-                    orders.create_order(order);
+                    // If position qty < target_position_qty, buy the difference up to capital
+                    let present_market_value = maybe_position
+                        .map(|p| p.quantity as f64 * quote.ask)
+                        .unwrap_or(0.0) as i64;
+                    let remaining_capital = capital - present_market_value;
+                    let shares = (remaining_capital as f64 / quote.ask) as i64;
+                    println!(
+                        "Buy signal for {}; present_market_value: {}; remaining_capital: {}; shares to buy: {}",
+                        quote.symbol, present_market_value, remaining_capital, shares
+                    );
+
+                    if shares > 0 {
+                        Some(Order {
+                            symbol: quote.symbol.clone(),
+                            quantity: shares,
+                            date: Local::now().naive_local().date(),
+                            side: Side::Buy,
+                            tradier_id: None,
+                        })
+                    } else {
+                        None
+                    }
                 }
                 Ok(Signal::Sell) => {
-                    //   - If we have a position, unwind
+                    // If we have a position, unwind
+                    match maybe_position {
+                        Some(p) => Some(Order {
+                            symbol: quote.symbol.clone(),
+                            quantity: p.quantity,
+                            date: Local::now().naive_local().date(),
+                            side: Side::Sell,
+                            tradier_id: None,
+                        }),
+                        None => None,
+                    };
+                    None
                 }
-                Ok(Signal::None) => {}
+                Ok(Signal::None) => None,
                 Err(e) => {
                     eprintln!("Error from strategy: {}", e);
+                    None
                 }
+            };
+
+            match order.map(|o| orders.create_order(o.clone())) {
+                Some(Ok(order)) => println!("Order created: {:?}", order),
+                Some(Err(e)) => eprintln!("Error creating order: {}", e),
+                None => (),
             }
         }
     }

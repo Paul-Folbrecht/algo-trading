@@ -158,7 +158,7 @@ impl Persistable for Position {
     }
 
     fn id(&self) -> i64 {
-        0 //self.tradier_id.unwrap_or(0)
+        self.tradier_id.unwrap_or(0)
     }
 }
 
@@ -197,12 +197,12 @@ impl StrategyHandler for Strategy {
                         quote.ask, data.mean, data.std_dev
                     );
                     println!(
-                        "quote.ask: {}; (data.mean - 2.0 * data.std_dev): {}",
+                        "quote.ask: {}; (mean - 2.0 * std_dev): {}",
                         quote.ask,
                         data.mean - 2.0 * data.std_dev
                     );
 
-                    let buy = quote.ask < data.mean - 2.0 * data.std_dev;
+                    let buy = true; //quote.ask < data.mean - 2.0 * data.std_dev;
                     let sell = quote.ask > data.mean + 2.0 * data.std_dev;
 
                     if buy {
@@ -212,6 +212,7 @@ impl StrategyHandler for Strategy {
                         println!("***Sell signal for {}***", quote.symbol);
                         return Ok(Signal::Sell);
                     } else {
+                        println!("No signal for {}", quote.symbol);
                         return Ok(Signal::None);
                     }
                 } else {
