@@ -15,7 +15,7 @@ pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
         println!("\n\n\nresponse:\n{:?}", r.unwrap().text());
 
         reqwest::blocking::Client::new()
-            .post(url)
+            .get(url)
             .headers(headers(token))
             .send()
             .map_err(backoff::Error::transient)
@@ -66,9 +66,8 @@ where
     retry(backoff(), op)
         .map_err::<String, _>(|e| e.to_string())
         .and_then(|r| {
-            r.json::<T>().map_err::<String, _>(|e| {
-                format!("Could not parse response body: {}", e.to_string())
-            })
+            r.json::<T>()
+                .map_err::<String, _>(|e| format!("Could not parse response body: {}", e))
         })
 }
 

@@ -88,7 +88,7 @@ mod implementation {
             symbol: order.symbol.clone(),
             quantity: order.quantity,
             cost_basis: 0.0,
-            date_acquired: Local::now(),
+            date: Local::now(),
         }
     }
 
@@ -99,7 +99,8 @@ mod implementation {
 
     #[derive(Deserialize)]
     struct Positions {
-        position: Vec<Position>,
+        // position: Vec<TradierPosition>,
+        position: TradierPosition,
     }
 
     pub fn read_positions(
@@ -114,13 +115,15 @@ mod implementation {
         match response {
             Ok(response) => {
                 let mut positions = HashMap::new();
-                response
-                    .positions
-                    .position
-                    .into_iter()
-                    .for_each(|position| {
-                        positions.insert(position.symbol.clone(), position);
-                    });
+                // response
+                //     .positions
+                //     .position
+                //     .into_iter()
+                //     .for_each(|position| {
+                //         positions.insert(position.symbol.clone(), position.into());
+                //     });
+                let position = response.positions.position;
+                positions.insert(position.symbol.clone(), position.into());
                 Ok(positions)
             }
             Err(e) => Err(e),

@@ -23,8 +23,8 @@ fn test_create_order() {
         quantity: 1,
     };
 
-    match service.create_order(order) {
-        Ok(_) => (),
+    match service.create_order(order.clone()) {
+        Ok(_) => println!("Order created successfully: {:?}", order),
         Err(e) => {
             eprintln!("\n\n\nError: {}", e);
             assert!(false);

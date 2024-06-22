@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local, NaiveDate};
-use core::serde::{tradier_date_format, tradier_date_time_format};
+use core::serde::{tradier_date_format, tradier_date_time_format, tradier_string_date_time_format};
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
@@ -79,6 +79,7 @@ pub struct Order {
     pub symbol: String,
     #[serde(with = "side_format")]
     pub side: Side,
+    // Integer quantity as we'll only trade equities
     pub quantity: i64,
 }
 
@@ -101,6 +102,17 @@ impl Order {
     }
 }
 
+#[derive(Deserialize)]
+pub struct TradierPosition {
+    pub id: i64,
+    pub symbol: String,
+    // Integer quantity as we'll only trade equities
+    pub quantity: f64,
+    pub cost_basis: f64,
+    #[serde(with = "tradier_string_date_time_format")]
+    pub date_acquired: DateTime<Local>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Position {
     pub tradier_id: Option<i64>,
@@ -108,7 +120,20 @@ pub struct Position {
     pub quantity: i64,
     pub cost_basis: f64,
     #[serde(with = "tradier_date_time_format")]
-    pub date_acquired: DateTime<Local>,
+    pub date: DateTime<Local>,
+}
+
+impl From<TradierPosition> for Position {
+    fn from(tp: TradierPosition) -> Self {
+        Position {
+            tradier_id: Some(tp.id),
+            symbol: tp.symbol,
+            quantity: tp.quantity as i64,
+            cost_basis: tp.cost_basis,
+            //            date: tp.date_acquired,
+            date: Local::now(),
+        }
+    }
 }
 
 impl Position {

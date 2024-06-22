@@ -17,16 +17,12 @@ pub fn new() -> Arc<impl PersistenceService> {
 }
 
 mod implementation {
-    use core::serde::tradier_date_time_format;
-    use std::any::Any;
-
     use super::*;
-    use chrono::{DateTime, Local};
     use mongodb::{
         bson::{self, Bson},
         sync::Client,
     };
-    use serde::Deserialize;
+    use std::any::Any;
 
     pub struct Persistence {
         pub sender: Sender<Box<dyn Persistable + Send>>,
@@ -36,16 +32,6 @@ mod implementation {
     pub struct Writer {
         pub client: Client,
         pub receiver: Receiver<Box<dyn Persistable + Send>>,
-    }
-
-    #[derive(Deserialize)]
-    struct TradierPosiiton {
-        pub id: i64,
-        pub symbol: String,
-        pub quantity: i64,
-        pub cost_basis: f64,
-        #[serde(with = "tradier_date_time_format")]
-        pub date_acquired: DateTime<Local>,
     }
 
     impl PersistenceService for Persistence {
