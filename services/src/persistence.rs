@@ -51,7 +51,7 @@ mod implementation {
                             }
                         },
                         Err(e) => {
-                            eprintln!("Error receiving orders: {:?}", e);
+                            eprintln!("Channel shut down: {:?}", e);
                         }
                     }
                 }
@@ -111,5 +111,5 @@ mod implementation {
 }
 
 #[cfg(test)]
-#[path = "./tests/persistence.rs"]
-mod persistence;
+#[path = "./tests/persistence_test.rs"]
+mod persistence_test;

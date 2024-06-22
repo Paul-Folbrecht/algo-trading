@@ -17,7 +17,7 @@ fn test_subscribe() {
                     std::process::exit(0);
                 }
                 Err(e) => {
-                    panic!("Error on receive!: {}", e);
+                    panic!("Error on receive: {}", e);
                 }
             }
             // @todo How to make this work?

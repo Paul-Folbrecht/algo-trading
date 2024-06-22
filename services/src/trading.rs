@@ -73,7 +73,7 @@ mod implementation {
                                 handle_quote(&symbol_data, &quote, &strategy, orders.clone());
                             }
                             Err(e) => {
-                                eprintln!("Error on receive!: {}", e);
+                                eprintln!("Channel shut down: {}", e);
                             }
                         }
                     }));

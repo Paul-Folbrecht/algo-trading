@@ -1,6 +1,5 @@
-use crate::persistence;
-
 use super::*;
+use crate::persistence;
 use chrono::Local;
 
 #[test]
@@ -18,7 +17,7 @@ fn test_create_order() {
     let order = Order {
         tradier_id: None,
         date: Local::now().naive_local().date(),
-        symbol: "SPY".to_string(),
+        symbol: "MSFT".to_string(),
         side: Side::Buy,
         quantity: 1,
     };
