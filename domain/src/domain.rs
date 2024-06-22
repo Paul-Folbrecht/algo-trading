@@ -167,6 +167,7 @@ pub enum Strategy {
     MeanReversion { symbols: Vec<String> },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Signal {
     Buy,
     Sell,
@@ -202,7 +203,7 @@ impl StrategyHandler for Strategy {
                         data.mean - 2.0 * data.std_dev
                     );
 
-                    let buy = true; //quote.ask < data.mean - 2.0 * data.std_dev;
+                    let buy = quote.ask < data.mean - 2.0 * data.std_dev;
                     let sell = quote.ask > data.mean + 2.0 * data.std_dev;
 
                     if buy {
@@ -223,3 +224,7 @@ impl StrategyHandler for Strategy {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "./domain_test.rs"]
+mod domain_test;
