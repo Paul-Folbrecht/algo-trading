@@ -1,5 +1,5 @@
 use super::*;
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate};
 use domain::domain::{Day, History};
 use implementation::*;
 
@@ -45,4 +45,46 @@ fn test_load_history() {
     let aapl = data.get(&"AAPL".to_string()).unwrap();
     assert_eq!(aapl.mean, 13.333333333333334);
     assert_eq!(aapl.std_dev, 4.714045207910316);
+}
+
+struct MockOrderService {}
+impl OrderService for MockOrderService {
+    fn create_order(&self, order: Order) -> Result<Order, String> {
+        Ok(order.with_id(1000))
+    }
+
+    fn get_position(&self, symbol: &str) -> Option<Position> {
+        match symbol {
+            "AAPL" => Some(Position {
+                symbol: symbol.to_string(),
+                quantity: 100,
+                tradier_id: None,
+                cost_basis: 10000.0,
+                date: Local::now(),
+            }),
+            "AMZN" => None,
+            _ => None,
+        }
+    }
+}
+
+#[test]
+fn test_handle_quote() {
+    let orders = Arc::new(MockOrderService {});
+
+    let quote = Quote {
+        symbol: "AAPL".to_string(),
+        bid: 1.0,
+        ask: 2.0,
+        biddate: Local::now(),
+        askdate: Local::now(),
+    };
+    match maybe_create_order(Signal::Buy, orders.get_position("AAPL"), &quote, 10000) {
+        Some(order) => {
+            assert_eq!(order.symbol, "AAPL");
+            assert_eq!(order.quantity, 4900);
+            assert_eq!(order.side, Side::Buy);
+        }
+        None => panic!("Expected an order"),
+    }
 }

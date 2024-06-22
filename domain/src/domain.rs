@@ -51,7 +51,7 @@ pub enum OrderType {
     StopLimit,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Side {
     Buy,
     Sell,

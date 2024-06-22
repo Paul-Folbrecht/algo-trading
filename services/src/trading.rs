@@ -97,7 +97,7 @@ mod implementation {
         }
     }
 
-    fn handle_quote<O: OrderService + Send + Sync>(
+    pub fn handle_quote<O: OrderService + Send + Sync>(
         symbol_data: &HashMap<String, SymbolData>,
         quote: &Quote,
         capital: i64,
@@ -105,60 +105,66 @@ mod implementation {
         orders: Arc<O>,
     ) {
         if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
-            let signal = strategy.handle(&quote, symbol_data);
             let maybe_position = orders.get_position(&quote.symbol);
-
-            let order: Option<Order> = match signal {
-                Ok(Signal::Buy) => {
-                    // If position qty < target_position_qty, buy the difference up to capital
-                    let present_market_value = maybe_position
-                        .map(|p| p.quantity as f64 * quote.ask)
-                        .unwrap_or(0.0) as i64;
-                    let remaining_capital = capital - present_market_value;
-                    let shares = (remaining_capital as f64 / quote.ask) as i64;
-                    println!(
-                        "Buy signal for {}; present_market_value: {}; remaining_capital: {}; shares to buy: {}",
-                        quote.symbol, present_market_value, remaining_capital, shares
-                    );
-
-                    if shares > 0 {
-                        Some(Order {
-                            symbol: quote.symbol.clone(),
-                            quantity: shares,
-                            date: Local::now().naive_local().date(),
-                            side: Side::Buy,
-                            tradier_id: None,
-                        })
-                    } else {
-                        None
-                    }
-                }
-                Ok(Signal::Sell) => {
-                    // If we have a position, unwind
-                    match maybe_position {
-                        Some(p) => Some(Order {
-                            symbol: quote.symbol.clone(),
-                            quantity: p.quantity,
-                            date: Local::now().naive_local().date(),
-                            side: Side::Sell,
-                            tradier_id: None,
-                        }),
-                        None => None,
-                    };
-                    None
-                }
-                Ok(Signal::None) => None,
-                Err(e) => {
-                    eprintln!("Error from strategy: {}", e);
-                    None
-                }
-            };
-
-            match order.map(|o| orders.create_order(o.clone())) {
-                Some(Ok(order)) => println!("Order created: {:?}", order),
-                Some(Err(e)) => eprintln!("Error creating order: {}", e),
-                None => (),
+            match strategy.handle(&quote, symbol_data) {
+                Ok(signal) => match maybe_create_order(signal, maybe_position, quote, capital) {
+                    Some(order) => match orders.create_order(order.clone()) {
+                        Ok(o) => println!("Order created: {:?}", o),
+                        Err(e) => eprintln!("Error creating order: {}", e),
+                    },
+                    None => (),
+                },
+                Err(e) => eprintln!("Error from strategy: {}", e),
             }
+        }
+    }
+
+    pub fn maybe_create_order(
+        signal: Signal,
+        maybe_position: Option<Position>,
+        quote: &Quote,
+        capital: i64,
+    ) -> Option<Order> {
+        match signal {
+            Signal::Buy => {
+                // If position qty < target_position_qty, buy the difference up to capital
+                let present_market_value = maybe_position
+                    .map(|p| p.quantity as f64 * quote.ask)
+                    .unwrap_or(0.0) as i64;
+                let remaining_capital = capital - present_market_value;
+                let shares = (remaining_capital as f64 / quote.ask) as i64;
+                println!(
+                    "Buy signal for {}; present_market_value: {}; remaining_capital: {}; shares to buy: {}",
+                    quote.symbol, present_market_value, remaining_capital, shares
+                );
+
+                if shares > 0 {
+                    Some(Order {
+                        symbol: quote.symbol.clone(),
+                        quantity: shares,
+                        date: Local::now().naive_local().date(),
+                        side: Side::Buy,
+                        tradier_id: None,
+                    })
+                } else {
+                    None
+                }
+            }
+            Signal::Sell => {
+                // If we have a position, unwind
+                match maybe_position {
+                    Some(p) => Some(Order {
+                        symbol: quote.symbol.clone(),
+                        quantity: p.quantity,
+                        date: Local::now().naive_local().date(),
+                        side: Side::Sell,
+                        tradier_id: None,
+                    }),
+                    None => None,
+                };
+                None
+            }
+            Signal::None => None,
         }
     }
 
