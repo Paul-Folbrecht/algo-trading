@@ -1,6 +1,12 @@
+sandbox = true
+access_token = ""
+sandbox_token = ""
+account_id = ""
+
 [[strategies]]
 name = "mean-reversion"
 symbols = ["SPY", "AAPL"]
+capital = [10000, 10000]
 
 # [[strategies]]
 # name = "pairs"

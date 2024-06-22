@@ -1,6 +1,12 @@
 use chrono::{DateTime, Local, NaiveDate};
-use core::serde::{tradier_date_format, tradier_date_time_format};
-use serde::Deserialize;
+use core::serde::{tradier_date_format, tradier_date_time_format, tradier_string_date_time_format};
+use serde::{Deserialize, Serialize};
+use std::{
+    any::Any,
+    fmt::{Display, Formatter},
+};
+
+use crate::serde::side_format;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Quote {
@@ -38,12 +44,137 @@ pub struct SymbolData {
 }
 
 #[derive(Debug, Clone)]
+pub enum OrderType {
+    Market,
+    Limit,
+    Stop,
+    StopLimit,
+}
+
+#[derive(Debug, Clone)]
+pub enum Side {
+    Buy,
+    Sell,
+}
+
+impl Display for Side {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Side::Buy => write!(f, "Buy"),
+            Side::Sell => write!(f, "Sell"),
+        }
+    }
+}
+
+pub trait Persistable {
+    fn as_any(&self) -> &dyn Any;
+    fn id(&self) -> i64;
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Order {
+    pub tradier_id: Option<i64>,
+    #[serde(with = "tradier_date_format")]
+    pub date: NaiveDate,
+    pub symbol: String,
+    #[serde(with = "side_format")]
+    pub side: Side,
+    // Integer quantity as we'll only trade equities
+    pub quantity: i64,
+}
+
+impl Persistable for Order {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn id(&self) -> i64 {
+        self.tradier_id.unwrap_or(0)
+    }
+}
+
+impl Order {
+    pub fn with_id(&self, tradier_id: i64) -> Self {
+        Order {
+            tradier_id: Some(tradier_id),
+            ..self.clone()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct TradierPosition {
+    pub id: i64,
+    pub symbol: String,
+    // Integer quantity as we'll only trade equities
+    pub quantity: f64,
+    pub cost_basis: f64,
+    #[serde(with = "tradier_string_date_time_format")]
+    pub date_acquired: DateTime<Local>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Position {
+    pub tradier_id: Option<i64>,
+    pub symbol: String,
+    pub quantity: i64,
+    pub cost_basis: f64,
+    #[serde(with = "tradier_date_time_format")]
+    pub date: DateTime<Local>,
+}
+
+impl From<TradierPosition> for Position {
+    fn from(tp: TradierPosition) -> Self {
+        Position {
+            tradier_id: Some(tp.id),
+            symbol: tp.symbol,
+            quantity: tp.quantity as i64,
+            cost_basis: tp.cost_basis,
+            //            date: tp.date_acquired,
+            date: Local::now(),
+        }
+    }
+}
+
+impl Position {
+    pub fn with_id(&self, tradier_id: i64) -> Self {
+        Position {
+            tradier_id: Some(tradier_id),
+            ..self.clone()
+        }
+    }
+
+    pub fn with_cost_basis(&self, cost_basis: f64) -> Self {
+        Position {
+            cost_basis,
+            ..self.clone()
+        }
+    }
+}
+
+impl Persistable for Position {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn id(&self) -> i64 {
+        self.tradier_id.unwrap_or(0)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Strategy {
     MeanReversion { symbols: Vec<String> },
 }
 
+pub enum Signal {
+    Buy,
+    Sell,
+    None,
+}
+
 pub trait StrategyHandler {
-    fn handle(&self, quote: &Quote, data: &SymbolData);
+    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String>;
 }
 
 impl Strategy {
@@ -56,7 +187,7 @@ impl Strategy {
 }
 
 impl StrategyHandler for Strategy {
-    fn handle(&self, quote: &Quote, data: &SymbolData) {
+    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String> {
         match self {
             Strategy::MeanReversion { symbols } => {
                 if symbols.contains(&quote.symbol) {
@@ -66,17 +197,27 @@ impl StrategyHandler for Strategy {
                         quote.ask, data.mean, data.std_dev
                     );
                     println!(
-                        "quote.ask: {}; (data.mean - 2.0 * data.std_dev): {}",
+                        "quote.ask: {}; (mean - 2.0 * std_dev): {}",
                         quote.ask,
                         data.mean - 2.0 * data.std_dev
                     );
 
-                    let buy = quote.ask < data.mean - 2.0 * data.std_dev;
+                    let buy = true; //quote.ask < data.mean - 2.0 * data.std_dev;
+                    let sell = quote.ask > data.mean + 2.0 * data.std_dev;
+
                     if buy {
                         println!("***Buy signal for {}***", quote.symbol);
+                        return Ok(Signal::Buy);
+                    } else if sell {
+                        println!("***Sell signal for {}***", quote.symbol);
+                        return Ok(Signal::Sell);
                     } else {
                         println!("No signal for {}", quote.symbol);
+                        return Ok(Signal::None);
                     }
+                } else {
+                    println!("Symbol {} not in strategy", quote.symbol);
+                    return Ok(Signal::None);
                 }
             }
         }

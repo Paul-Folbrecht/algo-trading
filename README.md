@@ -4,6 +4,8 @@ Algorithmic trading strategies and backtesting in Rust.
 
 To obtain an access token, create an account at Tradier, then go to [this page](https://documentation.tradier.com/brokerage-api/oauth/access-token).
 
+DISCLAIMER: This is a personal project and is not intended for production use. Use at your own risk. The author is not responsible for any financial losses incurred as a result of using this software.
+
 ## Configuration
 
 At present, only a very simple Bolinger Bands strategy is implemented.
@@ -23,3 +25,7 @@ symbols = ["SPY", "AAPL"]
 ## Running
 
 `cargo run <access-token>`
+
+## Testing
+
+`cargo test` requires the environment variable `TRADIER_ACCESS_TOKEN` to be set. (Yeah, that's naughty.)
