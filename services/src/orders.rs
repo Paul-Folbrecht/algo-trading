@@ -17,6 +17,7 @@ pub fn new(
     persistence: Arc<impl PersistenceService + Send + Sync>,
 ) -> Result<Arc<impl OrderService>, String> {
     let positions = implementation::read_positions(&base_url, &access_token, &account_id)?;
+    println!("Read positions from broker: {:?}", positions);
 
     Ok(Arc::new(implementation::Orders {
         access_token,
@@ -61,13 +62,22 @@ mod implementation {
                 "account_id={}&class=equity&symbol={}&side={}&quantity={}&type=market&duration=day",
                 self.account_id, order.symbol, order.side, order.quantity
             );
+
             let response = post::<OrderResponse>(&url, &self.access_token, body);
             match response {
                 Ok(response) => match response.order.status.as_str() {
                     "ok" => {
-                        self.persistence.write(Box::new(order.clone()));
-                        self.persistence
-                            .write(Box::new(position_from(&order).clone()));
+                        match self.persistence.write(Box::new(order.clone())) {
+                            Ok(_) => {}
+                            Err(e) => eprintln!("Error writing order to persistence: {}", e),
+                        }
+                        match self
+                            .persistence
+                            .write(Box::new(position_from(&order).clone()))
+                        {
+                            Ok(_) => {}
+                            Err(e) => eprintln!("Error writing position to persistence: {}", e),
+                        }
                         Ok(order.with_id(response.order.id))
                     }
                     _ => Err(response.order.status),

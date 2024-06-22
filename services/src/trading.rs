@@ -93,9 +93,11 @@ mod implementation {
     ) {
         if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
             let signal = strategy.handle(&quote, symbol_data);
+            let maybe_position = orders.get_position(&quote.symbol);
+
             match signal {
                 Ok(Signal::Buy) => {
-                    //   - If position qty < target_position_qty, buy the difference
+                    //   - If position qty < target_position_qty, buy the difference up to capital
                     let order = Order {
                         symbol: quote.symbol.clone(),
                         quantity: 0,
@@ -115,66 +117,6 @@ mod implementation {
             }
         }
     }
-
-    // fn handle_quote<O: OrderService + Send + Sync>(
-    //     rx: &crossbeam_channel::Receiver<Quote>,
-    //     orders: &Arc<O>,
-    // ) {
-    //     match rx.recv() {
-    //         Ok(quote) => {
-    //             let order = Order {
-    //                 symbol: quote.symbol.clone(),
-    //                 qty: 1,
-    //                 date: Local::now().naive_local().date(),
-    //                 side: Side::Buy,
-    //                 tradier_id: None,
-    //             };
-    //             orders.create_order(order);
-    //         }
-    //         Err(e) => {
-    //             eprintln!("Error on receive!: {}", e);
-    //         }
-    //     }
-    // }
-
-    // impl<
-    //         M: MarketDataService + Send + Sync,
-    //         H: HistoricalDataService + Send + Sync,
-    //         O: OrderService + Send + Sync,
-    //     > Trading<M, H, O>
-    // {
-    //     fn handle_quote(
-    //         &self,
-    //         symbol_data: &HashMap<String, SymbolData>,
-    //         quote: Quote,
-    //         strategy: &Strategy,
-    //     ) {
-    //         if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
-    //             println!("TradingService received quote:\n{:?}", quote);
-    //             let signal = strategy.handle(&quote, symbol_data);
-    //             match signal {
-    //                 Ok(Signal::Buy) => {
-    //                     //   - If position qty < target_position_qty, buy the difference
-    //                     let order = Order {
-    //                         symbol: quote.symbol.clone(),
-    //                         qty: 1,
-    //                         date: Local::now().naive_local().date(),
-    //                         side: Side::Buy,
-    //                         tradier_id: None,
-    //                     };
-    //                     self.orders.create_order(order);
-    //                 }
-    //                 Ok(Signal::Sell) => {
-    //                     //   - If we have a position, unwind
-    //                 }
-    //                 Ok(Signal::None) => {}
-    //                 Err(e) => {
-    //                     eprintln!("Error from strategy: {}", e);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
 
     pub fn load_history(
         symbols: &Vec<String>,

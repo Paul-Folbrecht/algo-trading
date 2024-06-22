@@ -139,7 +139,7 @@ impl From<TradierPosition> for Position {
 impl Position {
     pub fn with_id(&self, tradier_id: i64) -> Self {
         Position {
-            //            tradier_id: Some(tradier_id),
+            tradier_id: Some(tradier_id),
             ..self.clone()
         }
     }

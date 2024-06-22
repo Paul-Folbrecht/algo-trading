@@ -1,16 +1,15 @@
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
-use std::env;
+use std::{collections::HashMap, env};
 
 #[derive(Debug, Deserialize)]
-#[allow(unused)]
 pub struct Strategy {
     pub name: String,
     pub symbols: Vec<String>,
+    pub capital: HashMap<String, i64>,
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(unused)]
 pub struct AppConfig {
     pub access_token: String,
     pub sandbox_token: String,

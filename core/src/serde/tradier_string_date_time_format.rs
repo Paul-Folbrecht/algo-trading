@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset, Local, Utc};
+use chrono::{DateTime, FixedOffset, Local};
 use serde::{self, Deserialize, Deserializer};
 
 pub fn serialize<S>(date: &DateTime<Local>, serializer: S) -> Result<S::Ok, S::Error>
