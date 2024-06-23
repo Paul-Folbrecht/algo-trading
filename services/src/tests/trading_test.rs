@@ -74,17 +74,34 @@ fn test_handle_quote() {
 
     let quote = Quote {
         symbol: "AAPL".to_string(),
-        bid: 1.0,
-        ask: 2.0,
+        bid: 80.0,
+        ask: 80.0,
         biddate: Local::now(),
         askdate: Local::now(),
     };
+
     match maybe_create_order(Signal::Buy, orders.get_position("AAPL"), &quote, 10000) {
         Some(order) => {
             assert_eq!(order.symbol, "AAPL");
-            assert_eq!(order.quantity, 4900);
+            // Capital of $10K - 100 shares * 80 = $2000 remaining capital = 25 shares at $80
+            assert_eq!(order.quantity, 25);
             assert_eq!(order.side, Side::Buy);
         }
         None => panic!("Expected an order"),
+    }
+
+    match maybe_create_order(Signal::Sell, orders.get_position("AAPL"), &quote, 10000) {
+        Some(order) => {
+            assert_eq!(order.symbol, "AAPL");
+            // We always unwind completely and have 100 shares, so any Sell signal should sell all
+            assert_eq!(order.quantity, 100);
+            assert_eq!(order.side, Side::Sell);
+        }
+        None => panic!("Expected an order"),
+    }
+
+    match maybe_create_order(Signal::None, orders.get_position("AAPL"), &quote, 10000) {
+        Some(_) => panic!("Expected no order"),
+        None => {}
     }
 }

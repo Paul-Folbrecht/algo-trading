@@ -150,6 +150,7 @@ mod implementation {
                     None
                 }
             }
+
             Signal::Sell => {
                 // If we have a position, unwind
                 match maybe_position {
@@ -160,10 +161,13 @@ mod implementation {
                         side: Side::Sell,
                         tradier_id: None,
                     }),
-                    None => None,
-                };
-                None
+                    None => {
+                        println!("None");
+                        None
+                    }
+                }
             }
+
             Signal::None => None,
         }
     }
