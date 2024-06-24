@@ -88,9 +88,8 @@ mod implementation {
                                 eprintln!("Channel shut down: {}", e);
                             }
                         }
-                    }));
+                    }))
                 }
-
                 Err(e) => return Err(format!("Failed to subscribe to MarketDataService: {}", e)),
             }
             Ok(())
@@ -102,7 +101,7 @@ mod implementation {
         quote: &Quote,
         capital: i64,
         strategy: &Strategy,
-        orders: Arc<impl OrderService + 'static>, //Arc<O>,
+        orders: Arc<impl OrderService + 'static>,
     ) {
         if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
             let maybe_position = orders.get_position(&quote.symbol);
@@ -129,7 +128,7 @@ mod implementation {
     ) -> Option<Order> {
         match signal {
             Signal::Buy => {
-                // If position qty < target_position_qty, buy the difference up to capital
+                // If position market value < capital, but up to the limit
                 let present_market_value = maybe_position
                     .map(|p| p.quantity as f64 * quote.ask)
                     .unwrap_or(0.0) as i64;
@@ -146,21 +145,10 @@ mod implementation {
                         quantity: shares,
                         date: Local::now().naive_local().date(),
                         side: Side::Buy,
-                        tradier_id: None,
+                        id: None,
                     }),
                     _ => None,
                 }
-                // if shares > 0 {
-                //     Some(Order {
-                //         symbol: quote.symbol.clone(),
-                //         quantity: shares,
-                //         date: Local::now().naive_local().date(),
-                //         side: Side::Buy,
-                //         tradier_id: None,
-                //     })
-                // } else {
-                //     None
-                // }
             }
 
             Signal::Sell => {
@@ -171,7 +159,7 @@ mod implementation {
                         quantity: p.quantity,
                         date: Local::now().naive_local().date(),
                         side: Side::Sell,
-                        tradier_id: None,
+                        id: None,
                     }),
                     None => None,
                 }

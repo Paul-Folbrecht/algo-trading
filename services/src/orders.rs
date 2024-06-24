@@ -98,7 +98,7 @@ mod implementation {
         Position {
             // id & cost_basis will be updated when positions from the broker
             // These fields are not relevant to trading
-            tradier_id: None,
+            id: None,
             symbol: order.symbol.clone(),
             quantity: order.quantity,
             cost_basis: 0.0,
@@ -113,8 +113,7 @@ mod implementation {
 
     #[derive(Deserialize)]
     struct Positions {
-        // position: Vec<TradierPosition>,
-        position: TradierPosition,
+        position: Vec<TradierPosition>,
     }
 
     pub fn read_positions(
@@ -129,15 +128,13 @@ mod implementation {
         match response {
             Ok(response) => {
                 let mut positions = HashMap::new();
-                // response
-                //     .positions
-                //     .position
-                //     .into_iter()
-                //     .for_each(|position| {
-                //         positions.insert(position.symbol.clone(), position.into());
-                //     });
-                let position = response.positions.position;
-                positions.insert(position.symbol.clone(), position.into());
+                response
+                    .positions
+                    .position
+                    .into_iter()
+                    .for_each(|position| {
+                        positions.insert(position.symbol.clone(), position.into());
+                    });
                 Ok(positions)
             }
             Err(e) => Err(e),

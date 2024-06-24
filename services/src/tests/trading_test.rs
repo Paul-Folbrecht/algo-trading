@@ -58,7 +58,7 @@ impl OrderService for MockOrderService {
             "AAPL" => Some(Position {
                 symbol: symbol.to_string(),
                 quantity: 100,
-                tradier_id: None,
+                id: None,
                 cost_basis: 10000.0,
                 date: Local::now(),
             }),

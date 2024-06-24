@@ -70,10 +70,3 @@ where
                 .map_err::<String, _>(|e| format!("Could not parse response body: {}", e))
         })
 }
-
-// #[cfg(test)]
-// #[test]
-// fn test_post() {
-//     let url = "https://example.com";
-//     post::<String>("https://example.com", "", "".to_string()).unwrap();
-// }

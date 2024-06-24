@@ -73,7 +73,7 @@ pub trait Persistable {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Order {
-    pub tradier_id: Option<i64>,
+    pub id: Option<i64>,
     #[serde(with = "tradier_date_format")]
     pub date: NaiveDate,
     pub symbol: String,
@@ -89,14 +89,14 @@ impl Persistable for Order {
     }
 
     fn id(&self) -> i64 {
-        self.tradier_id.unwrap_or(0)
+        self.id.unwrap_or(0)
     }
 }
 
 impl Order {
-    pub fn with_id(&self, tradier_id: i64) -> Self {
+    pub fn with_id(&self, id: i64) -> Self {
         Order {
-            tradier_id: Some(tradier_id),
+            id: Some(id),
             ..self.clone()
         }
     }
@@ -115,7 +115,7 @@ pub struct TradierPosition {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Position {
-    pub tradier_id: Option<i64>,
+    pub id: Option<i64>,
     pub symbol: String,
     pub quantity: i64,
     pub cost_basis: f64,
@@ -126,7 +126,7 @@ pub struct Position {
 impl From<TradierPosition> for Position {
     fn from(tp: TradierPosition) -> Self {
         Position {
-            tradier_id: Some(tp.id),
+            id: Some(tp.id),
             symbol: tp.symbol,
             quantity: tp.quantity as i64,
             cost_basis: tp.cost_basis,
@@ -137,9 +137,9 @@ impl From<TradierPosition> for Position {
 }
 
 impl Position {
-    pub fn with_id(&self, tradier_id: i64) -> Self {
+    pub fn with_id(&self, id: i64) -> Self {
         Position {
-            tradier_id: Some(tradier_id),
+            id: Some(id),
             ..self.clone()
         }
     }
@@ -158,7 +158,7 @@ impl Persistable for Position {
     }
 
     fn id(&self) -> i64 {
-        self.tradier_id.unwrap_or(0)
+        self.id.unwrap_or(0)
     }
 }
 
