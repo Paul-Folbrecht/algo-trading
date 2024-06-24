@@ -1,5 +1,6 @@
 use crossbeam_channel::{Receiver, Sender};
 use domain::domain::{Order, Persistable, Position};
+use mongodb::sync::Client;
 use std::{
     sync::{atomic::AtomicBool, Arc},
     thread::JoinHandle,
@@ -8,23 +9,26 @@ use std::{
 pub trait PersistenceService {
     fn init(&self, shutdown: Arc<AtomicBool>) -> Result<JoinHandle<()>, String>;
     fn write(&self, p: Box<dyn Persistable + Send>) -> Result<(), String>;
-    fn read_positions(&self) -> Result<Vec<Position>, String>;
+    fn drop_positions(&self) -> Result<(), String>;
 }
 
-pub fn new() -> Arc<impl PersistenceService> {
+pub fn new(url: String) -> Arc<impl PersistenceService> {
+    let client = Client::with_uri_str(url).expect("Could not connect to MongoDB");
     let (sender, receiver) = crossbeam_channel::unbounded();
-    Arc::new(implementation::Persistence { sender, receiver })
+    Arc::new(implementation::Persistence {
+        client,
+        sender,
+        receiver,
+    })
 }
 
 mod implementation {
     use super::*;
-    use mongodb::{
-        bson::{self, Bson},
-        sync::Client,
-    };
+    use mongodb::bson::{self, Bson};
     use std::any::Any;
 
     pub struct Persistence {
+        pub client: Client,
         pub sender: Sender<Box<dyn Persistable + Send>>,
         pub receiver: Receiver<Box<dyn Persistable + Send>>,
     }
@@ -36,12 +40,11 @@ mod implementation {
 
     impl PersistenceService for Persistence {
         fn init(&self, shutdown: Arc<AtomicBool>) -> Result<JoinHandle<()>, String> {
+            let client = self.client.clone();
             let receiver = self.receiver.clone();
-            let handle = std::thread::spawn(move || {
-                let uri = "mongodb://127.0.0.1:27017";
-                let client = Client::with_uri_str(uri).expect("Could not connect to MongoDB");
-                let writer = Writer { client, receiver };
+            let writer = Writer { client, receiver };
 
+            let handle = std::thread::spawn(move || {
                 while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
                     match writer.receiver.recv() {
                         Ok(p) => match writer.write(p) {
@@ -63,8 +66,12 @@ mod implementation {
             self.sender.send(p).map_err(|e| e.to_string())
         }
 
-        fn read_positions(&self) -> Result<Vec<Position>, String> {
-            unimplemented!()
+        fn drop_positions(&self) -> Result<(), String> {
+            self.client
+                .database("algo-trading")
+                .collection::<bson::Document>("positions")
+                .drop(None)
+                .map_err(|e| e.to_string())
         }
     }
 

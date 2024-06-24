@@ -18,6 +18,7 @@ pub fn new(
 ) -> Result<Arc<impl OrderService>, String> {
     let positions = implementation::read_positions(&base_url, &access_token, &account_id)?;
     println!("Read positions from broker: {:?}", positions);
+    implementation::update_local_positions(persistence.clone(), &positions)?;
 
     Ok(Arc::new(implementation::Orders {
         access_token,
@@ -70,14 +71,14 @@ mod implementation {
                         let new_order = order.with_id(response.order.id);
                         match self.persistence.write(Box::new(new_order.clone())) {
                             Ok(_) => {}
-                            Err(e) => eprintln!("Error writing order to persistence: {}", e),
+                            Err(e) => eprintln!("Error writing order: {}", e),
                         }
                         match self
                             .persistence
                             .write(Box::new(position_from(&new_order).clone()))
                         {
                             Ok(_) => {}
-                            Err(e) => eprintln!("Error writing position to persistence: {}", e),
+                            Err(e) => eprintln!("Error writing position: {}", e),
                         }
                         Ok(new_order)
                     }
@@ -95,6 +96,8 @@ mod implementation {
 
     fn position_from(order: &Order) -> Position {
         Position {
+            // id & cost_basis will be updated when positions from the broker
+            // These fields are not relevant to trading
             tradier_id: None,
             symbol: order.symbol.clone(),
             quantity: order.quantity,
@@ -139,6 +142,18 @@ mod implementation {
             }
             Err(e) => Err(e),
         }
+    }
+
+    pub fn update_local_positions(
+        persistence: Arc<impl PersistenceService>,
+        positions: &HashMap<String, Position>,
+    ) -> Result<(), String> {
+        // In the future, we may rec, but for now we'll update all positions from the source of truth
+        persistence.drop_positions()?;
+        positions
+            .values()
+            .map(|position| persistence.write(Box::new(position.clone())))
+            .collect()
     }
 }
 

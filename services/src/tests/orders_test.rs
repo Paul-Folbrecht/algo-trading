@@ -6,7 +6,7 @@ use chrono::Local;
 fn test_create_order() {
     let access_token = std::env::var("TRADIER_SANDBOX_TOKEN").unwrap();
     let account_id = std::env::var("TRADIER_ACCOUNT_ID").unwrap();
-    let persistence = persistence::new();
+    let persistence = persistence::new("mongodb://localhost:27017".to_string());
     let service = new(
         access_token,
         account_id,

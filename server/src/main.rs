@@ -22,7 +22,7 @@ fn main() {
     let sandbox_token = config.sandbox_token;
     let market_data = market_data::new(access_token.clone());
     let historical_data = historical_data::new(access_token.clone());
-    let persistence = persistence::new();
+    let persistence = persistence::new(config.mongo_url.clone());
     let orders = if config.sandbox {
         orders::new(
             sandbox_token.clone(),

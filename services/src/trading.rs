@@ -34,7 +34,7 @@ mod implementation {
     use crate::orders::OrderService;
     use chrono::Local;
     use domain::domain::SymbolData;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, thread::JoinHandle};
 
     pub struct Trading<
         M: MarketDataService + 'static + Send + Sync,
@@ -47,7 +47,7 @@ mod implementation {
         pub market_data: Arc<M>,
         pub historical_data: Arc<H>,
         pub orders: Arc<O>,
-        pub thread_handle: Option<std::thread::JoinHandle<()>>,
+        pub thread_handle: Option<JoinHandle<()>>,
     }
 
     impl<
@@ -97,12 +97,12 @@ mod implementation {
         }
     }
 
-    pub fn handle_quote<O: OrderService + Send + Sync>(
+    pub fn handle_quote(
         symbol_data: &HashMap<String, SymbolData>,
         quote: &Quote,
         capital: i64,
         strategy: &Strategy,
-        orders: Arc<O>,
+        orders: Arc<impl OrderService + 'static>, //Arc<O>,
     ) {
         if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
             let maybe_position = orders.get_position(&quote.symbol);
@@ -116,6 +116,8 @@ mod implementation {
                 },
                 Err(e) => eprintln!("Error from strategy: {}", e),
             }
+        } else {
+            eprintln!("No symbol data found for {}", quote.symbol);
         }
     }
 
@@ -138,17 +140,27 @@ mod implementation {
                     quote.symbol, present_market_value, remaining_capital, shares
                 );
 
-                if shares > 0 {
-                    Some(Order {
+                match shares {
+                    n if n > 0 => Some(Order {
                         symbol: quote.symbol.clone(),
                         quantity: shares,
                         date: Local::now().naive_local().date(),
                         side: Side::Buy,
                         tradier_id: None,
-                    })
-                } else {
-                    None
+                    }),
+                    _ => None,
                 }
+                // if shares > 0 {
+                //     Some(Order {
+                //         symbol: quote.symbol.clone(),
+                //         quantity: shares,
+                //         date: Local::now().naive_local().date(),
+                //         side: Side::Buy,
+                //         tradier_id: None,
+                //     })
+                // } else {
+                //     None
+                // }
             }
 
             Signal::Sell => {
@@ -161,10 +173,7 @@ mod implementation {
                         side: Side::Sell,
                         tradier_id: None,
                     }),
-                    None => {
-                        println!("None");
-                        None
-                    }
+                    None => None,
                 }
             }
 

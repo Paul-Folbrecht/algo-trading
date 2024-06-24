@@ -22,7 +22,7 @@ fn test_persistence() {
         date: Local::now(),
     };
 
-    let db = persistence::new();
+    let db = persistence::new("mongodb://localhost:27017".to_string());
     let shutdown = Arc::new(AtomicBool::new(false));
     db.init(shutdown.clone()).expect("Persistence init failed");
     db.write(Box::new(order)).expect("Write order failed");
