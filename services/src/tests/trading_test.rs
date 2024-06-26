@@ -39,12 +39,12 @@ impl HistoricalDataService for MockHistoricalDataService {
 
 #[test]
 fn test_load_history() {
-    let symbols = vec!["AAPL".to_string()];
+    let symbols = vec!["SPY".to_string()];
     let historical_data_service = Arc::new(MockHistoricalDataService {});
     let data = load_history(&symbols, historical_data_service);
-    let aapl = data.get(&"AAPL".to_string()).unwrap();
-    assert_eq!(aapl.mean, 13.333333333333334);
-    assert_eq!(aapl.std_dev, 4.714045207910316);
+    let spy = data.get(&"SPY".to_string()).unwrap();
+    assert_eq!(spy.mean, 13.333333333333334);
+    assert_eq!(spy.std_dev, 4.714045207910316);
 }
 
 struct MockOrderService {}
@@ -55,7 +55,7 @@ impl OrderService for MockOrderService {
 
     fn get_position(&self, symbol: &str) -> Option<Position> {
         match symbol {
-            "AAPL" => Some(Position {
+            "SPY" => Some(Position {
                 symbol: symbol.to_string(),
                 quantity: 100,
                 broker_id: None,
@@ -77,16 +77,16 @@ fn test_handle_quote() {
     let orders = Arc::new(MockOrderService {});
 
     let quote = Quote {
-        symbol: "AAPL".to_string(),
+        symbol: "SPY".to_string(),
         bid: 80.0,
         ask: 80.0,
         biddate: Local::now(),
         askdate: Local::now(),
     };
 
-    match maybe_create_order(Signal::Buy, orders.get_position("AAPL"), &quote, 10000) {
+    match maybe_create_order(Signal::Buy, orders.get_position("SPY"), &quote, 10000) {
         Some(order) => {
-            assert_eq!(order.symbol, "AAPL");
+            assert_eq!(order.symbol, "SPY");
             // Capital of $10K - 100 shares * 80 = $2000 remaining capital = 25 shares at $80
             assert_eq!(order.quantity, 25);
             assert_eq!(order.side, Side::Buy);
@@ -94,9 +94,9 @@ fn test_handle_quote() {
         None => panic!("Expected an order"),
     }
 
-    match maybe_create_order(Signal::Sell, orders.get_position("AAPL"), &quote, 10000) {
+    match maybe_create_order(Signal::Sell, orders.get_position("SPY"), &quote, 10000) {
         Some(order) => {
-            assert_eq!(order.symbol, "AAPL");
+            assert_eq!(order.symbol, "SPY");
             // We always unwind completely and have 100 shares, so any Sell signal should sell all
             assert_eq!(order.quantity, 100);
             assert_eq!(order.side, Side::Sell);
@@ -104,7 +104,7 @@ fn test_handle_quote() {
         None => panic!("Expected an order"),
     }
 
-    match maybe_create_order(Signal::None, orders.get_position("AAPL"), &quote, 10000) {
+    match maybe_create_order(Signal::None, orders.get_position("SPY"), &quote, 10000) {
         Some(_) => panic!("Expected no order"),
         None => {}
     }

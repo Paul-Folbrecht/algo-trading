@@ -10,13 +10,13 @@ fn test_persistence() {
         broker_id: Some(0),
         date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
         side: Buy,
-        symbol: "AAPL".to_string(),
+        symbol: "SPY".to_string(),
         quantity: 100,
     };
 
     let position = Position {
         broker_id: Some(0),
-        symbol: "AAPL".to_string(),
+        symbol: "SPY".to_string(),
         quantity: 100,
         cost_basis: 1000.0,
         date: Local::now(),
@@ -30,6 +30,6 @@ fn test_persistence() {
     thread::sleep(Duration::from_secs(1));
     shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
     thread::sleep(Duration::from_secs(1));
-    // Now go to the mongo shell and verify the order
+    // Now go to the mongo shell and verify the writes
     // And yes this is an integration test, not a unit test
 }

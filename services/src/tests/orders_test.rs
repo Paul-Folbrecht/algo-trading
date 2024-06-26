@@ -17,7 +17,7 @@ fn test_create_order() {
     let order = Order {
         broker_id: None,
         date: Local::now().naive_local().date(),
-        symbol: "AAPL".to_string(),
+        symbol: "SPY".to_string(),
         side: Side::Buy,
         quantity: 1,
     };
