@@ -153,7 +153,10 @@ mod implementation {
                     });
                 Ok(positions)
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                eprintln!("Error reading positions - probably there are < 2: {}", e);
+                Ok(HashMap::new())
+            }
         }
     }
 

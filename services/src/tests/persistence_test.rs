@@ -30,6 +30,6 @@ fn test_persistence() {
     thread::sleep(Duration::from_secs(1));
     shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
     thread::sleep(Duration::from_secs(1));
-    // Now go to the mongo shell and verify the order, homey
+    // Now go to the mongo shell and verify the order
     // And yes this is an integration test, not a unit test
 }
