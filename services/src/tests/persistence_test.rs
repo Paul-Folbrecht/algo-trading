@@ -7,7 +7,7 @@ use std::{thread, time::Duration};
 #[test]
 fn test_persistence() {
     let order = Order {
-        id: Some(0),
+        broker_id: Some(0),
         date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
         side: Buy,
         symbol: "AAPL".to_string(),
@@ -15,7 +15,7 @@ fn test_persistence() {
     };
 
     let position = Position {
-        id: Some(0),
+        broker_id: Some(0),
         symbol: "AAPL".to_string(),
         quantity: 100,
         cost_basis: 1000.0,

@@ -24,7 +24,8 @@ pub fn new(url: String) -> Arc<impl PersistenceService> {
 
 mod implementation {
     use super::*;
-    use mongodb::bson::{self, Bson};
+    use core::serde;
+    use mongodb::bson::{self, doc, Bson};
     use std::any::Any;
 
     pub struct Persistence {
@@ -78,17 +79,50 @@ mod implementation {
     impl Writer {
         fn write(&self, p: Box<dyn Persistable>) -> Result<(), String> {
             if let Some(order) = p.as_any().downcast_ref::<Order>() {
-                let serialized = bson::to_bson(&order).map_err(|e| e.to_string())?;
-                self.write_impl("orders", order.id(), &serialized)
+                let doc = bson::to_bson(&order).map_err(|e| e.to_string())?;
+                self.insert("orders", order.id(), &doc)
             } else if let Some(position) = p.as_any().downcast_ref::<Position>() {
-                let serialized = bson::to_bson(&position).map_err(|e| e.to_string())?;
-                self.write_impl("positions", position.id(), &serialized)
+                let filter: bson::Document = doc! { "symbol": position.symbol.clone() };
+                let doc: bson::Document = doc! {
+                    "$set": bson::to_bson(position).map_err(|e| e.to_string())?
+                };
+                self.upsert("positions", position.id(), filter, &doc)
             } else {
                 Err(format!("Cannot handle unknown type: {:?}", p.type_id()))
             }
         }
 
-        fn write_impl(&self, collection_name: &str, id: i64, object: &Bson) -> Result<(), String> {
+        fn upsert(
+            &self,
+            collection_name: &str,
+            id: i64,
+            filter: bson::Document,
+            document: &bson::Document,
+        ) -> Result<(), String> {
+            let collection = self
+                .client
+                .database("algo-trading")
+                .collection::<Bson>(collection_name);
+            let options: mongodb::options::UpdateOptions =
+                mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
+
+            match collection.update_one(filter, document.to_owned(), options) {
+                Ok(result) => {
+                    let mongo_id = result
+                        .upserted_id
+                        .map(|id| id.as_object_id().expect("Cast to ObjectId failed"));
+                    println!("Inserted object with id, mongo id: {}, {:?}", id, mongo_id);
+                }
+                Err(e) => {
+                    eprintln!("Error inserting object: {:?}; {:?}", e, id);
+                }
+            };
+            Ok(())
+        }
+
+        fn insert(&self, collection_name: &str, id: i64, object: &Bson) -> Result<(), String> {
             match object.as_document().map(|doc| doc.to_owned()) {
                 Some(document) => {
                     let collection = self

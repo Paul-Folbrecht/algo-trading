@@ -58,13 +58,17 @@ impl OrderService for MockOrderService {
             "AAPL" => Some(Position {
                 symbol: symbol.to_string(),
                 quantity: 100,
-                id: None,
+                broker_id: None,
                 cost_basis: 10000.0,
                 date: Local::now(),
             }),
             "AMZN" => None,
             _ => None,
         }
+    }
+
+    fn update_position(&self, position: &Position) {
+        unimplemented!()
     }
 }
 

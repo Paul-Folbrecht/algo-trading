@@ -8,6 +8,7 @@ use std::{collections::HashMap, sync::Mutex};
 pub trait OrderService {
     fn create_order(&self, order: Order) -> Result<Order, String>;
     fn get_position(&self, symbol: &str) -> Option<Position>;
+    fn update_position(&self, position: &Position);
 }
 
 pub fn new(
@@ -73,13 +74,13 @@ mod implementation {
                             Ok(_) => {}
                             Err(e) => eprintln!("Error writing order: {}", e),
                         }
-                        match self
-                            .persistence
-                            .write(Box::new(position_from(&new_order).clone()))
-                        {
-                            Ok(_) => {}
+
+                        let position = position_from(&new_order, self.get_position(&order.symbol));
+                        match self.persistence.write(Box::new(position.clone())) {
+                            Ok(_) => self.update_position(&position),
                             Err(e) => eprintln!("Error writing position: {}", e),
                         }
+
                         Ok(new_order)
                     }
                     _ => Err(response.order.status),
@@ -92,17 +93,32 @@ mod implementation {
             let positions = self.positions.lock().unwrap();
             positions.get(symbol).cloned()
         }
+
+        fn update_position(&self, position: &Position) {
+            self.positions
+                .lock()
+                .unwrap()
+                .insert(position.symbol.clone(), position.clone());
+        }
     }
 
-    fn position_from(order: &Order) -> Position {
-        Position {
-            // id & cost_basis will be updated when positions from the broker
-            // These fields are not relevant to trading
-            id: None,
-            symbol: order.symbol.clone(),
-            quantity: order.quantity,
-            cost_basis: 0.0,
-            date: Local::now(),
+    fn position_from(order: &Order, existing: Option<Position>) -> Position {
+        match existing {
+            Some(position) => Position {
+                quantity: position.quantity + order.quantity,
+                ..position
+            },
+            None => {
+                Position {
+                    // broker_id & cost_basis will be updated when positions are read from the broker
+                    // These fields are not relevant to trading
+                    broker_id: None,
+                    symbol: order.symbol.clone(),
+                    quantity: order.quantity,
+                    cost_basis: 0.0,
+                    date: Local::now(),
+                }
+            }
         }
     }
 

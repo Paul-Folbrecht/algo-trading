@@ -128,7 +128,7 @@ mod implementation {
     ) -> Option<Order> {
         match signal {
             Signal::Buy => {
-                // If position market value < capital, but up to the limit
+                // If position market value < capital, buy up to the limit
                 let present_market_value = maybe_position
                     .map(|p| p.quantity as f64 * quote.ask)
                     .unwrap_or(0.0) as i64;
@@ -145,7 +145,7 @@ mod implementation {
                         quantity: shares,
                         date: Local::now().naive_local().date(),
                         side: Side::Buy,
-                        id: None,
+                        broker_id: None,
                     }),
                     _ => None,
                 }
@@ -159,7 +159,7 @@ mod implementation {
                         quantity: p.quantity,
                         date: Local::now().naive_local().date(),
                         side: Side::Sell,
-                        id: None,
+                        broker_id: None,
                     }),
                     None => None,
                 }
