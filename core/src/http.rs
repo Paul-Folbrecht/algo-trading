@@ -7,12 +7,14 @@ use serde::de::DeserializeOwned;
 
 pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
     let op = || {
-        let r = reqwest::blocking::Client::new()
+        let response = reqwest::blocking::Client::new()
             .get(url)
             .headers(headers(token))
             .send()
-            .map_err(backoff::Error::transient);
-        println!("\n\n\nresponse:\n{:?}", r.unwrap().text());
+            .map_err(backoff::Error::transient)
+            .unwrap()
+            .text();
+        println!("\n\response:\n{:?}", response);
 
         reqwest::blocking::Client::new()
             .get(url)
@@ -70,10 +72,3 @@ where
                 .map_err::<String, _>(|e| format!("Could not parse response body: {}", e))
         })
 }
-
-// #[cfg(test)]
-// #[test]
-// fn test_post() {
-//     let url = "https://example.com";
-//     post::<String>("https://example.com", "", "".to_string()).unwrap();
-// }

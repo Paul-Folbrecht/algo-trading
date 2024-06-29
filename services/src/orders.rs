@@ -8,6 +8,7 @@ use std::{collections::HashMap, sync::Mutex};
 pub trait OrderService {
     fn create_order(&self, order: Order) -> Result<Order, String>;
     fn get_position(&self, symbol: &str) -> Option<Position>;
+    fn update_position(&self, position: &Position);
 }
 
 pub fn new(
@@ -18,6 +19,7 @@ pub fn new(
 ) -> Result<Arc<impl OrderService>, String> {
     let positions = implementation::read_positions(&base_url, &access_token, &account_id)?;
     println!("Read positions from broker: {:?}", positions);
+    implementation::update_local_positions(persistence.clone(), &positions)?;
 
     Ok(Arc::new(implementation::Orders {
         access_token,
@@ -70,15 +72,15 @@ mod implementation {
                         let new_order = order.with_id(response.order.id);
                         match self.persistence.write(Box::new(new_order.clone())) {
                             Ok(_) => {}
-                            Err(e) => eprintln!("Error writing order to persistence: {}", e),
+                            Err(e) => eprintln!("Error writing order: {}", e),
                         }
-                        match self
-                            .persistence
-                            .write(Box::new(position_from(&new_order).clone()))
-                        {
-                            Ok(_) => {}
-                            Err(e) => eprintln!("Error writing position to persistence: {}", e),
+
+                        let position = position_from(&new_order, self.get_position(&order.symbol));
+                        match self.persistence.write(Box::new(position.clone())) {
+                            Ok(_) => self.update_position(&position),
+                            Err(e) => eprintln!("Error writing position: {}", e),
                         }
+
                         Ok(new_order)
                     }
                     _ => Err(response.order.status),
@@ -91,15 +93,32 @@ mod implementation {
             let positions = self.positions.lock().unwrap();
             positions.get(symbol).cloned()
         }
+
+        fn update_position(&self, position: &Position) {
+            self.positions
+                .lock()
+                .unwrap()
+                .insert(position.symbol.clone(), position.clone());
+        }
     }
 
-    fn position_from(order: &Order) -> Position {
-        Position {
-            tradier_id: None,
-            symbol: order.symbol.clone(),
-            quantity: order.quantity,
-            cost_basis: 0.0,
-            date: Local::now(),
+    fn position_from(order: &Order, existing: Option<Position>) -> Position {
+        match existing {
+            Some(position) => Position {
+                quantity: position.quantity + order.quantity,
+                ..position
+            },
+            None => {
+                Position {
+                    // broker_id & cost_basis will be updated when positions are read from the broker
+                    // These fields are not relevant to trading
+                    broker_id: None,
+                    symbol: order.symbol.clone(),
+                    quantity: order.quantity,
+                    cost_basis: 0.0,
+                    date: Local::now(),
+                }
+            }
         }
     }
 
@@ -110,8 +129,7 @@ mod implementation {
 
     #[derive(Deserialize)]
     struct Positions {
-        // position: Vec<TradierPosition>,
-        position: TradierPosition,
+        position: Vec<TradierPosition>,
     }
 
     pub fn read_positions(
@@ -126,19 +144,32 @@ mod implementation {
         match response {
             Ok(response) => {
                 let mut positions = HashMap::new();
-                // response
-                //     .positions
-                //     .position
-                //     .into_iter()
-                //     .for_each(|position| {
-                //         positions.insert(position.symbol.clone(), position.into());
-                //     });
-                let position = response.positions.position;
-                positions.insert(position.symbol.clone(), position.into());
+                response
+                    .positions
+                    .position
+                    .into_iter()
+                    .for_each(|position| {
+                        positions.insert(position.symbol.clone(), position.into());
+                    });
                 Ok(positions)
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                eprintln!("Error reading positions - probably there are < 2: {}", e);
+                Ok(HashMap::new())
+            }
         }
+    }
+
+    pub fn update_local_positions(
+        persistence: Arc<impl PersistenceService>,
+        positions: &HashMap<String, Position>,
+    ) -> Result<(), String> {
+        // In the future, we may rec, but for now we'll update all positions from the source of truth
+        persistence.drop_positions()?;
+        positions
+            .values()
+            .map(|position| persistence.write(Box::new(position.clone())))
+            .collect()
     }
 }
 

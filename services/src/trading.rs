@@ -34,7 +34,7 @@ mod implementation {
     use crate::orders::OrderService;
     use chrono::Local;
     use domain::domain::SymbolData;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, thread::JoinHandle};
 
     pub struct Trading<
         M: MarketDataService + 'static + Send + Sync,
@@ -47,7 +47,7 @@ mod implementation {
         pub market_data: Arc<M>,
         pub historical_data: Arc<H>,
         pub orders: Arc<O>,
-        pub thread_handle: Option<std::thread::JoinHandle<()>>,
+        pub thread_handle: Option<JoinHandle<()>>,
     }
 
     impl<
@@ -88,77 +88,93 @@ mod implementation {
                                 eprintln!("Channel shut down: {}", e);
                             }
                         }
-                    }));
+                    }))
                 }
-
                 Err(e) => return Err(format!("Failed to subscribe to MarketDataService: {}", e)),
             }
             Ok(())
         }
     }
 
-    fn handle_quote<O: OrderService + Send + Sync>(
+    pub fn handle_quote(
         symbol_data: &HashMap<String, SymbolData>,
         quote: &Quote,
         capital: i64,
         strategy: &Strategy,
-        orders: Arc<O>,
+        orders: Arc<impl OrderService + 'static>,
     ) {
         if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
-            let signal = strategy.handle(&quote, symbol_data);
             let maybe_position = orders.get_position(&quote.symbol);
+            match strategy.handle(&quote, symbol_data) {
+                Ok(signal) => match maybe_create_order(signal, maybe_position, quote, capital) {
+                    Some(order) => match orders.create_order(order.clone()) {
+                        Ok(o) => println!("Order created: {:?}", o),
+                        Err(e) => eprintln!("Error creating order: {}", e),
+                    },
+                    None => (),
+                },
+                Err(e) => eprintln!("Error from strategy: {}", e),
+            }
+        } else {
+            eprintln!("No symbol data found for {}", quote.symbol);
+        }
+    }
 
-            let order: Option<Order> = match signal {
-                Ok(Signal::Buy) => {
-                    // If position qty < target_position_qty, buy the difference up to capital
-                    let present_market_value = maybe_position
-                        .map(|p| p.quantity as f64 * quote.ask)
-                        .unwrap_or(0.0) as i64;
-                    let remaining_capital = capital - present_market_value;
-                    let shares = (remaining_capital as f64 / quote.ask) as i64;
-                    println!(
-                        "Buy signal for {}; present_market_value: {}; remaining_capital: {}; shares to buy: {}",
-                        quote.symbol, present_market_value, remaining_capital, shares
-                    );
+    pub fn maybe_create_order(
+        signal: Signal,
+        maybe_position: Option<Position>,
+        quote: &Quote,
+        capital: i64,
+    ) -> Option<Order> {
+        match signal {
+            Signal::Buy => {
+                // If position market value < capital, buy up to the limit
+                let present_market_value = maybe_position
+                    .map(|p| p.quantity as f64 * quote.ask)
+                    .unwrap_or(0.0) as i64;
+                let remaining_capital = capital - present_market_value;
+                let shares = (remaining_capital as f64 / quote.ask) as i64;
+                println!(
+                    "Buy signal for {} at {}; present_market_value: {}; remaining_capital: {}; shares to buy: {}",
+                    quote.symbol, quote.ask, present_market_value, remaining_capital, shares
+                );
 
-                    if shares > 0 {
-                        Some(Order {
-                            symbol: quote.symbol.clone(),
-                            quantity: shares,
-                            date: Local::now().naive_local().date(),
-                            side: Side::Buy,
-                            tradier_id: None,
-                        })
-                    } else {
+                match shares {
+                    n if n > 0 => Some(Order {
+                        symbol: quote.symbol.clone(),
+                        quantity: shares,
+                        date: Local::now().naive_local().date(),
+                        side: Side::Buy,
+                        broker_id: None,
+                    }),
+                    _ => {
+                        println!("Buy signal for {}, but no capital", quote.symbol);
                         None
                     }
                 }
-                Ok(Signal::Sell) => {
-                    // If we have a position, unwind
-                    match maybe_position {
-                        Some(p) => Some(Order {
-                            symbol: quote.symbol.clone(),
-                            quantity: p.quantity,
-                            date: Local::now().naive_local().date(),
-                            side: Side::Sell,
-                            tradier_id: None,
-                        }),
-                        None => None,
-                    };
-                    None
-                }
-                Ok(Signal::None) => None,
-                Err(e) => {
-                    eprintln!("Error from strategy: {}", e);
-                    None
-                }
-            };
-
-            match order.map(|o| orders.create_order(o.clone())) {
-                Some(Ok(order)) => println!("Order created: {:?}", order),
-                Some(Err(e)) => eprintln!("Error creating order: {}", e),
-                None => (),
             }
+
+            Signal::Sell => {
+                // If we have a position, unwind it all
+                match maybe_position {
+                    Some(p) => Some(Order {
+                        symbol: quote.symbol.clone(),
+                        quantity: p.quantity,
+                        date: Local::now().naive_local().date(),
+                        side: Side::Sell,
+                        broker_id: None,
+                    }),
+                    None => {
+                        println!(
+                            "Sell signal for {}, but no position to unwind",
+                            quote.symbol
+                        );
+                        None
+                    }
+                }
+            }
+
+            Signal::None => None,
         }
     }
 

@@ -8,6 +8,7 @@ pub struct AppConfig {
     pub sandbox_token: String,
     pub account_id: String,
     pub sandbox: bool,
+    pub mongo_url: String,
     pub strategies: Vec<Strategy>,
 }
 
@@ -18,6 +19,7 @@ impl From<ConfigHolder> for AppConfig {
             sandbox_token: holder.sandbox_token,
             account_id: holder.account_id,
             sandbox: holder.sandbox,
+            mongo_url: holder.mongo_url,
             strategies: holder.strategies.into_iter().map(|s| s.into()).collect(),
         }
     }
@@ -53,6 +55,7 @@ struct ConfigHolder {
     pub sandbox_token: String,
     pub account_id: String,
     pub sandbox: bool,
+    pub mongo_url: String,
     pub strategies: Vec<StrategyHolder>,
 }
 

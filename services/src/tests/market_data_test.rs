@@ -4,7 +4,7 @@ use super::*;
 fn test_subscribe() {
     let access_token = std::env::var("TRADIER_ACCESS_TOKEN").unwrap();
     let service = new(access_token);
-    let symbols = vec!["AAPL".to_string()];
+    let symbols = vec!["SPY".to_string()];
     let shutdown = Arc::new(AtomicBool::new(false));
     let _ = service.init(shutdown.clone(), symbols).unwrap();
 

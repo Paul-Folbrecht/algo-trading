@@ -1,5 +1,6 @@
 use crossbeam_channel::{Receiver, Sender};
 use domain::domain::{Order, Persistable, Position};
+use mongodb::sync::Client;
 use std::{
     sync::{atomic::AtomicBool, Arc},
     thread::JoinHandle,
@@ -8,23 +9,27 @@ use std::{
 pub trait PersistenceService {
     fn init(&self, shutdown: Arc<AtomicBool>) -> Result<JoinHandle<()>, String>;
     fn write(&self, p: Box<dyn Persistable + Send>) -> Result<(), String>;
-    fn read_positions(&self) -> Result<Vec<Position>, String>;
+    fn drop_positions(&self) -> Result<(), String>;
 }
 
-pub fn new() -> Arc<impl PersistenceService> {
+pub fn new(url: String) -> Arc<impl PersistenceService> {
+    let client = Client::with_uri_str(url).expect("Could not connect to MongoDB");
     let (sender, receiver) = crossbeam_channel::unbounded();
-    Arc::new(implementation::Persistence { sender, receiver })
+    Arc::new(implementation::Persistence {
+        client,
+        sender,
+        receiver,
+    })
 }
 
 mod implementation {
     use super::*;
-    use mongodb::{
-        bson::{self, Bson},
-        sync::Client,
-    };
+    use mongodb::bson::{self, doc, Bson};
+    use serde::Serialize;
     use std::any::Any;
 
     pub struct Persistence {
+        pub client: Client,
         pub sender: Sender<Box<dyn Persistable + Send>>,
         pub receiver: Receiver<Box<dyn Persistable + Send>>,
     }
@@ -36,12 +41,11 @@ mod implementation {
 
     impl PersistenceService for Persistence {
         fn init(&self, shutdown: Arc<AtomicBool>) -> Result<JoinHandle<()>, String> {
+            let client = self.client.clone();
             let receiver = self.receiver.clone();
-            let handle = std::thread::spawn(move || {
-                let uri = "mongodb://127.0.0.1:27017";
-                let client = Client::with_uri_str(uri).expect("Could not connect to MongoDB");
-                let writer = Writer { client, receiver };
+            let writer = Writer { client, receiver };
 
+            let handle = std::thread::spawn(move || {
                 while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
                     match writer.receiver.recv() {
                         Ok(p) => match writer.write(p) {
@@ -63,46 +67,65 @@ mod implementation {
             self.sender.send(p).map_err(|e| e.to_string())
         }
 
-        fn read_positions(&self) -> Result<Vec<Position>, String> {
-            unimplemented!()
+        fn drop_positions(&self) -> Result<(), String> {
+            self.client
+                .database("algo-trading")
+                .collection::<bson::Document>("positions")
+                .drop(None)
+                .map_err(|e| e.to_string())
         }
     }
 
     impl Writer {
         fn write(&self, p: Box<dyn Persistable>) -> Result<(), String> {
             if let Some(order) = p.as_any().downcast_ref::<Order>() {
-                let serialized = bson::to_bson(&order).map_err(|e| e.to_string())?;
-                self.write_impl("orders", order.id(), &serialized)
+                let filter: bson::Document = doc! {
+                    "symbol": order.symbol.clone(),
+                    "date": order.date.format("%Y-%m-%d").to_string()
+                };
+                self.upsert("orders", order.id(), filter, &order)
             } else if let Some(position) = p.as_any().downcast_ref::<Position>() {
-                let serialized = bson::to_bson(&position).map_err(|e| e.to_string())?;
-                self.write_impl("positions", position.id(), &serialized)
+                let filter: bson::Document = doc! { "symbol": position.symbol.clone() };
+                self.upsert("positions", position.id(), filter, &position)
             } else {
                 Err(format!("Cannot handle unknown type: {:?}", p.type_id()))
             }
         }
 
-        fn write_impl(&self, collection_name: &str, id: i64, object: &Bson) -> Result<(), String> {
-            match object.as_document().map(|doc| doc.to_owned()) {
-                Some(document) => {
-                    let collection = self
-                        .client
-                        .database("algo-trading")
-                        .collection(collection_name);
-                    match collection.insert_one(document.to_owned(), None) {
-                        Ok(insert_result) => {
-                            let mongo_id = insert_result.inserted_id.as_object_id().expect(
-                                format!("Cast to ObjectId failed; order id: {:?}", id).as_str(),
-                            );
-                            println!("Inserted object with id, mongo id: {}, {}", id, mongo_id);
-                        }
-                        Err(e) => {
-                            eprintln!("Error inserting object: {:?}; {:?}", e, id);
-                        }
-                    };
-                    Ok(())
+        fn upsert<T: ?Sized + Serialize>(
+            &self,
+            collection_name: &str,
+            id: i64,
+            filter: bson::Document,
+            object: &T,
+        ) -> Result<(), String> {
+            let document: bson::Document = doc! {
+                "$set": bson::to_bson(object).map_err(|e| e.to_string())?
+            };
+            let collection = self
+                .client
+                .database("algo-trading")
+                .collection::<Bson>(collection_name);
+            let options: mongodb::options::UpdateOptions =
+                mongodb::options::UpdateOptions::builder()
+                    .upsert(true)
+                    .build();
+
+            match collection.update_one(filter, document.to_owned(), options) {
+                Ok(result) => {
+                    let mongo_id = result
+                        .upserted_id
+                        .map(|id| id.as_object_id().expect("Cast to ObjectId failed"));
+                    println!(
+                        "Inserted/updated object with id, mongo id: {}, {:?}",
+                        id, mongo_id
+                    );
                 }
-                None => Err("Could not serialize order: ".to_string()),
-            }
+                Err(e) => {
+                    eprintln!("Error inserting object: {:?}; {:?}", e, id);
+                }
+            };
+            Ok(())
         }
     }
 }
