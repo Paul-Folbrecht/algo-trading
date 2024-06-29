@@ -135,8 +135,8 @@ mod implementation {
                 let remaining_capital = capital - present_market_value;
                 let shares = (remaining_capital as f64 / quote.ask) as i64;
                 println!(
-                    "Buy signal for {}; present_market_value: {}; remaining_capital: {}; shares to buy: {}",
-                    quote.symbol, present_market_value, remaining_capital, shares
+                    "Buy signal for {} at {}; present_market_value: {}; remaining_capital: {}; shares to buy: {}",
+                    quote.symbol, quote.ask, present_market_value, remaining_capital, shares
                 );
 
                 match shares {
@@ -147,12 +147,15 @@ mod implementation {
                         side: Side::Buy,
                         broker_id: None,
                     }),
-                    _ => None,
+                    _ => {
+                        println!("Buy signal for {}, but no capital", quote.symbol);
+                        None
+                    }
                 }
             }
 
             Signal::Sell => {
-                // If we have a position, unwind
+                // If we have a position, unwind it all
                 match maybe_position {
                     Some(p) => Some(Order {
                         symbol: quote.symbol.clone(),
@@ -161,7 +164,13 @@ mod implementation {
                         side: Side::Sell,
                         broker_id: None,
                     }),
-                    None => None,
+                    None => {
+                        println!(
+                            "Sell signal for {}, but no position to unwind",
+                            quote.symbol
+                        );
+                        None
+                    }
                 }
             }
 

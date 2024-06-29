@@ -187,18 +187,18 @@ impl Strategy {
 }
 
 impl StrategyHandler for Strategy {
-    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String> {
-        // let quote = if _quote.symbol == "AAPL" {
-        //     Quote {
-        //         symbol: "AAPL".to_string(),
-        //         bid: 100.0,
-        //         ask: 100.0,
-        //         biddate: Local::now(),
-        //         askdate: Local::now(),
-        //     }
-        // } else {
-        //     _quote.clone()
-        // };
+    fn handle(&self, _quote: &Quote, data: &SymbolData) -> Result<Signal, String> {
+        let quote = if _quote.symbol == "AAPL" {
+            Quote {
+                symbol: "AAPL".to_string(),
+                bid: 100.0,
+                ask: 100.0,
+                biddate: Local::now(),
+                askdate: Local::now(),
+            }
+        } else {
+            _quote.clone()
+        };
         match self {
             Strategy::MeanReversion { symbols } => {
                 if symbols.contains(&quote.symbol) {
