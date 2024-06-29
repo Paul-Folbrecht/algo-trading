@@ -10,13 +10,21 @@ DISCLAIMER: This is a personal project and is not intended for production use. U
 
 At present, only a very simple Bolinger Bands strategy is implemented.
 
-Modify either `config\default.toml` or `config\local.toml` to configure symbols. Example:
+Either modify `config\default.toml` or create `config\local.toml` to specify your account and trading information. Example:
 
 ```
+sandbox = true
+access_token = "XXXX"
+sandbox_token = "XXXX"
+account_id = "XXXX"
+
 [[strategies]]
 name = "mean-reversion"
-symbols = ["SPY", "AAPL"]
+symbols = ["AAPL", "AMZN"]
+capital = [100000, 10000]
 ```
+
+sandbox_token must be set, but a valid value is optional and only required if you are using the sandbox environment.
 
 ## Building
 
@@ -28,4 +36,43 @@ symbols = ["SPY", "AAPL"]
 
 ## Testing
 
-`cargo test` requires the environment variable `TRADIER_ACCESS_TOKEN` to be set. (Yeah, that's naughty.)
+`cargo test` requires the environment variables `TRADIER_ACCESS_TOKEN`, `TRADIER_SANDBOX_TOKEN`, and `TRADIER_ACCOUNT_ID` to be set.
+# algo-trading
+
+Algorithmic trading strategies and backtesting in Rust.
+
+To obtain an access token, create an account at Tradier, then go to [this page](https://documentation.tradier.com/brokerage-api/oauth/access-token).
+
+DISCLAIMER: This is a personal project and is not intended for production use. Use at your own risk. The author is not responsible for any financial losses incurred as a result of using this software.
+
+## Configuration
+
+At present, only a very simple Bolinger Bands strategy is implemented.
+
+Either modify `config\default.toml` or create `config\local.toml` to specify your account and trading information. Example:
+
+```
+sandbox = true
+access_token = "XXXX"
+sandbox_token = "XXXX"
+account_id = "XXXX"
+
+[[strategies]]
+name = "mean-reversion"
+symbols = ["AAPL", "AMZN"]
+capital = [100000, 10000]
+```
+
+sandbox_token must be set, but a valid value is optional and only required if you are using the sandbox environment.
+
+## Building
+
+`cargo build`
+
+## Running
+
+`cargo run <access-token>`
+
+## Testing
+
+`cargo test` requires the environment variables `TRADIER_ACCESS_TOKEN`, `TRADIER_SANDBOX_TOKEN`, and `TRADIER_ACCOUNT_ID` to be set.
