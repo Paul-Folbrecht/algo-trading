@@ -1,5 +1,5 @@
 use chrono::{DateTime, Local, NaiveDate};
-use core::serde::{tradier_date_format, tradier_date_time_format, tradier_string_date_time_format};
+use core::serde::{millis_date_time_format, rfc_3339_date_time_format, string_date_format};
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
@@ -13,9 +13,9 @@ pub struct Quote {
     pub symbol: String,
     pub bid: f64,
     pub ask: f64,
-    #[serde(with = "tradier_date_time_format")]
+    #[serde(with = "millis_date_time_format")]
     pub biddate: DateTime<Local>,
-    #[serde(with = "tradier_date_time_format")]
+    #[serde(with = "millis_date_time_format")]
     pub askdate: DateTime<Local>,
 }
 
@@ -26,7 +26,7 @@ pub struct History {
 
 #[derive(Deserialize, Debug)]
 pub struct Day {
-    #[serde(with = "tradier_date_format")]
+    #[serde(with = "string_date_format")]
     pub date: NaiveDate,
     pub open: f64,
     pub high: f64,
@@ -74,7 +74,7 @@ pub trait Persistable {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Order {
     pub broker_id: Option<i64>,
-    #[serde(with = "tradier_date_format")]
+    #[serde(with = "string_date_format")]
     pub date: NaiveDate,
     pub symbol: String,
     #[serde(with = "side_format")]
@@ -108,7 +108,7 @@ pub struct TradierPosition {
     pub symbol: String,
     pub quantity: f64,
     pub cost_basis: f64,
-    #[serde(with = "tradier_string_date_time_format")]
+    #[serde(with = "rfc_3339_date_time_format")]
     pub date_acquired: DateTime<Local>,
 }
 
@@ -119,7 +119,7 @@ pub struct Position {
     // Integer quantity as we'll only trade equities
     pub quantity: i64,
     pub cost_basis: f64,
-    #[serde(with = "tradier_date_time_format")]
+    #[serde(with = "millis_date_time_format")]
     pub date: DateTime<Local>,
 }
 
