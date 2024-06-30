@@ -6,9 +6,5 @@ mongo_url = "mongodb://localhost:27017/"
 
 [[strategies]]
 name = "mean-reversion"
-symbols = ["SPY", "AAPL"]
-capital = [10000, 10000]
-
-# [[strategies]]
-# name = "pairs"
-# symbols = []
+symbols = ["AAPL", "AMZN"]
+capital = [100000, 10000]
