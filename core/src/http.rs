@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use backoff::{retry, Error, ExponentialBackoff};
 use reqwest::{
     blocking::Response,
@@ -7,14 +9,14 @@ use serde::de::DeserializeOwned;
 
 pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
     let op = || {
-        let response = reqwest::blocking::Client::new()
-            .get(url)
-            .headers(headers(token))
-            .send()
-            .map_err(backoff::Error::transient)
-            .unwrap()
-            .text();
-        println!("\n\response:\n{:?}", response);
+        // let response = reqwest::blocking::Client::new()
+        //     .get(url)
+        //     .headers(headers(token))
+        //     .send()
+        //     .map_err(backoff::Error::transient)
+        //     .unwrap()
+        //     .text();
+        // println!("\n\response:\n{:?}", response);
 
         reqwest::blocking::Client::new()
             .get(url)
@@ -63,7 +65,7 @@ fn call<T, F, E>(op: F) -> Result<T, String>
 where
     T: DeserializeOwned,
     F: FnMut() -> Result<Response, Error<E>>,
-    E: std::fmt::Display,
+    E: Display,
 {
     retry(backoff(), op)
         .map_err::<String, _>(|e| e.to_string())

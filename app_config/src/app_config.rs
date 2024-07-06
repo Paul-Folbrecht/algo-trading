@@ -71,9 +71,9 @@ impl AppConfig {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
 
         let holder: ConfigHolder = Config::builder()
-            .add_source(File::with_name("config/default"))
-            .add_source(File::with_name(&format!("/config/{}", run_mode)).required(false))
-            .add_source(File::with_name("config/local").required(false))
+            .add_source(File::with_name("app_config/default"))
+            .add_source(File::with_name(&format!("/app_config/{}", run_mode)).required(false))
+            .add_source(File::with_name("app_config/local").required(false))
             .build()?
             .try_deserialize::<ConfigHolder>()?;
         Ok(holder.into())

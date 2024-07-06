@@ -6,13 +6,11 @@ use std::{
     sync::{atomic::AtomicBool, Arc},
 };
 
-use config::AppConfig;
+use app_config::app_config::AppConfig;
 use services::persistence::PersistenceService;
 use services::trading::TradingService;
 use services::{historical_data, market_data, orders, trading};
 use services::{market_data::MarketDataService, persistence};
-
-mod config;
 
 fn main() {
     let config = AppConfig::new().expect("Could not load config");

@@ -1,0 +1,9 @@
+sandbox = true
+access_token = "RX0IJTkJdbCoS2L5km6RiClQuK9X"
+sandbox_token = "ywVWpNLzVRHnVSBhFWS2u71x2Wai"
+account_id = "VA4503134"
+
+[[strategies]]
+name = "mean-reversion"
+symbols = ["AAPL", "AMZN"]
+capital = [100000, 10000]
