@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
-use chrono::{Local, NaiveDate};
+use chrono::NaiveDate;
 use domain::domain::Day;
 use services::historical_data::HistoricalDataService;
+use std::collections::HashMap;
 
 pub fn new(
     access_token: String,
@@ -13,9 +14,15 @@ pub fn new(
     underlying: Arc<impl HistoricalDataService + 'static + Send + Sync>,
 ) -> Arc<impl HistoricalDataService> {
     let start = end - chrono::Duration::days(backtest_range + hist_data_range);
-    let history = underlying
-        .fetch("AAPL", start, end)
-        .expect("Failed to fetch historical data");
+    let history = symbols
+        .iter()
+        .map(|symbol| {
+            let data = underlying
+                .fetch(symbol, start, end)
+                .expect("Failed to fetch historical data");
+            (symbol.clone(), data)
+        })
+        .collect::<HashMap<String, Vec<Day>>>();
     Arc::new(implementation::BacktestHistoricalData { start, history })
 }
 
@@ -24,7 +31,7 @@ mod implementation {
 
     pub struct BacktestHistoricalData {
         pub start: NaiveDate,
-        pub history: Vec<Day>,
+        pub history: HashMap<String, Vec<Day>>,
     }
 
     impl HistoricalDataService for BacktestHistoricalData {
@@ -34,15 +41,25 @@ mod implementation {
             start: NaiveDate,
             end: NaiveDate,
         ) -> reqwest::Result<Vec<Day>> {
+            let symbol_history = self
+                .history
+                .get(symbol)
+                .expect(format!("No data for {}", symbol).as_ref());
             let start_index = date_to_index(start, self.start);
             let end_index = date_to_index(end, self.start);
-            assert!(start_index >= 0);
-            assert!((end_index as usize) < self.history.len());
+
             println!(
-                "BacktestHistoricalData.fetch: from {} to {}; indices {} - {}",
-                start, end, start_index, end_index
+                "BacktestHistoricalData.fetch: from {} to {}; indices {} - {}; len {}",
+                start,
+                end,
+                start_index,
+                end_index,
+                symbol_history.len()
             );
-            Ok(self.history[start_index as usize..end_index as usize].to_vec())
+
+            assert!(start_index >= 0);
+            assert!((end_index as usize) < symbol_history.len());
+            Ok(symbol_history[start_index as usize..end_index as usize].to_vec())
         }
     }
 

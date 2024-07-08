@@ -11,10 +11,8 @@ impl HistoricalDataService for MockHistoricalDataService {
         let backtest_range = 20;
         let hist_data_range = 4;
         let start = self.end - chrono::Duration::days(backtest_range + hist_data_range);
-        // let end = NaiveDate::from_ymd_opt(2024, 7, 1).unwrap();
-        // let start = end - chrono::Duration::days(backtest_range + hist_data_range);
         let mut days = Vec::with_capacity((backtest_range + hist_data_range) as usize);
-        for i in 0..backtest_range + hist_data_range {
+        for i in 0..=backtest_range + hist_data_range {
             days.push(Day {
                 date: start + chrono::Duration::days(i),
                 open: 1.0,
@@ -62,8 +60,34 @@ fn test_windowing() {
     );
 
     // Middle
+    let start = NaiveDate::from_ymd_opt(2024, 6, 16).unwrap();
+    let end = start + chrono::Duration::days(4);
+    let data = service.fetch("SPY", start, end).unwrap();
+    assert_eq!(data.len(), hist_data_range as usize);
+    assert_eq!(
+        data.into_iter().map(|d| d.date).collect::<Vec<_>>(),
+        vec![
+            NaiveDate::from_ymd_opt(2024, 6, 16).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 6, 17).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 6, 18).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 6, 19).unwrap()
+        ]
+    );
 
     // Second to last
 
     // Last
+    let start = NaiveDate::from_ymd_opt(2024, 6, 26).unwrap();
+    let end = start + chrono::Duration::days(4);
+    let data = service.fetch("SPY", start, end).unwrap();
+    assert_eq!(data.len(), hist_data_range as usize);
+    assert_eq!(
+        data.into_iter().map(|d| d.date).collect::<Vec<_>>(),
+        vec![
+            NaiveDate::from_ymd_opt(2024, 6, 26).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 6, 27).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 6, 28).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 6, 29).unwrap()
+        ]
+    );
 }
