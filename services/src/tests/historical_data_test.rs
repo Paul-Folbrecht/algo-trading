@@ -11,7 +11,7 @@ fn test_fetch() {
     match service.fetch(symbol, start, end) {
         Ok(history) => {
             println!("History: {:?}", history);
-            assert!(history.day.len() > 0);
+            assert!(history.len() > 0);
         }
         Err(e) => {
             println!("Error: {}", e);

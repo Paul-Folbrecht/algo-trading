@@ -146,6 +146,7 @@ mod implementation {
                         date: Local::now().naive_local().date(),
                         side: Side::Buy,
                         broker_id: None,
+                        px: Some(quote.ask),
                     }),
                     _ => {
                         println!("Buy signal for {}, but no capital", quote.symbol);
@@ -163,6 +164,7 @@ mod implementation {
                         date: Local::now().naive_local().date(),
                         side: Side::Sell,
                         broker_id: None,
+                        px: Some(quote.bid),
                     }),
                     None => {
                         println!(
@@ -188,10 +190,8 @@ mod implementation {
                 let end = Local::now().naive_local().date();
                 let start = end - chrono::Duration::days(20);
                 println!("Loading history for {} from {} to {}", symbol, start, end);
-                let query: Result<Vec<domain::domain::Day>, reqwest::Error> =
-                    historical_data_service
-                        .fetch(symbol, start, end)
-                        .map(|h| h.day);
+                let query: Result<Vec<Day>, reqwest::Error> =
+                    historical_data_service.fetch(symbol, start, end);
                 match query {
                     Ok(history) => {
                         let sum = history.iter().map(|day| day.close).sum::<f64>();

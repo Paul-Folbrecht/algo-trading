@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use chrono::NaiveDate;
-use domain::domain::History;
+use domain::domain::Day;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
 
 pub trait HistoricalDataService {
-    fn fetch(&self, symbol: &str, start: NaiveDate, end: NaiveDate) -> reqwest::Result<History>;
+    fn fetch(&self, symbol: &str, start: NaiveDate, end: NaiveDate) -> reqwest::Result<Vec<Day>>;
 }
 
 pub fn new(access_token: String) -> Arc<impl HistoricalDataService> {
@@ -21,8 +21,13 @@ mod implementation {
     }
 
     #[derive(Deserialize, Debug)]
-    pub struct HistoryResponse {
+    struct HistoryResponse {
         pub history: History,
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct History {
+        pub day: Vec<Day>,
     }
 
     impl HistoricalDataService for HistoricalData {
@@ -31,7 +36,7 @@ mod implementation {
             symbol: &str,
             start: NaiveDate,
             end: NaiveDate,
-        ) -> reqwest::Result<History> {
+        ) -> reqwest::Result<Vec<Day>> {
             let base = "https://api.tradier.com/v1/markets/history";
             let params = format!(
                 "symbol={}&interval=daily&start={}&end={}&session_filter=all",
@@ -46,7 +51,7 @@ mod implementation {
                 .send()
             {
                 Ok(response) => match response.json::<implementation::HistoryResponse>() {
-                    Ok(history) => Ok(history.history),
+                    Ok(history) => Ok(history.history.day),
                     Err(e) => {
                         eprintln!("Failed to deserialize: {}", e);
                         Err(e)

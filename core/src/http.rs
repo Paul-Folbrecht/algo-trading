@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, io::Read};
 
 use backoff::{retry, Error, ExponentialBackoff};
 use reqwest::{
@@ -9,15 +9,6 @@ use serde::de::DeserializeOwned;
 
 pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
     let op = || {
-        // let response = reqwest::blocking::Client::new()
-        //     .get(url)
-        //     .headers(headers(token))
-        //     .send()
-        //     .map_err(backoff::Error::transient)
-        //     .unwrap()
-        //     .text();
-        // println!("\n\response:\n{:?}", response);
-
         reqwest::blocking::Client::new()
             .get(url)
             .headers(headers(token))
@@ -30,6 +21,16 @@ pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
 
 pub fn post<T: DeserializeOwned>(url: &str, token: &str, body: String) -> Result<T, String> {
     let op = || {
+        let response = reqwest::blocking::Client::new()
+            .post(url)
+            .headers(headers(token))
+            .body(body.clone())
+            .send()
+            .map_err(backoff::Error::transient)
+            .unwrap()
+            .text();
+        println!("\n\nresponse:\n{:?}", response);
+
         reqwest::blocking::Client::new()
             .post(url)
             .headers(headers(token))
@@ -69,8 +70,17 @@ where
 {
     retry(backoff(), op)
         .map_err::<String, _>(|e| e.to_string())
-        .and_then(|r| {
-            r.json::<T>()
-                .map_err::<String, _>(|e| format!("Could not parse response body: {}", e))
+        .and_then(|mut response| {
+            let mut buf = String::new();
+            response
+                .read_to_string(&mut buf)
+                .expect("HTTP response not valid UTF-8");
+            if buf.contains("error") {
+                Err(format!("Received Error Response: {}", buf))
+            } else {
+                response
+                    .json::<T>()
+                    .map_err::<String, _>(|e| format!("Could not parse response body: {}", e))
+            }
         })
 }

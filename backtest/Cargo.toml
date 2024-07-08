@@ -6,5 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-services = { path = "../services" }
 app-config = { path = "../app_config" }
+domain = { path = "../domain" }
+services = { path = "../services" }
+chrono = "0.4.38"
+reqwest = { version = "*", features = ["json", "blocking"] }

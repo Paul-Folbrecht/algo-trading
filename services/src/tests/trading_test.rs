@@ -1,39 +1,37 @@
 use super::*;
 use chrono::{Local, NaiveDate};
-use domain::domain::{Day, History};
+use domain::domain::Day;
 use implementation::*;
 
 struct MockHistoricalDataService {}
 impl HistoricalDataService for MockHistoricalDataService {
-    fn fetch(&self, _: &str, _: NaiveDate, _: NaiveDate) -> Result<History, reqwest::Error> {
-        Ok(History {
-            day: vec![
-                Day {
-                    date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
-                    open: 1.0,
-                    high: 1.0,
-                    low: 1.0,
-                    close: 10.0,
-                    volume: 1,
-                },
-                Day {
-                    date: NaiveDate::from_ymd_opt(2024, 4, 2).unwrap(),
-                    open: 2.0,
-                    high: 2.0,
-                    low: 2.0,
-                    close: 10.0,
-                    volume: 2,
-                },
-                Day {
-                    date: NaiveDate::from_ymd_opt(2024, 4, 3).unwrap(),
-                    open: 3.0,
-                    high: 3.0,
-                    low: 3.0,
-                    close: 20.0,
-                    volume: 3,
-                },
-            ],
-        })
+    fn fetch(&self, _: &str, _: NaiveDate, _: NaiveDate) -> Result<Vec<Day>, reqwest::Error> {
+        Ok(vec![
+            Day {
+                date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
+                open: 1.0,
+                high: 1.0,
+                low: 1.0,
+                close: 10.0,
+                volume: 1,
+            },
+            Day {
+                date: NaiveDate::from_ymd_opt(2024, 4, 2).unwrap(),
+                open: 2.0,
+                high: 2.0,
+                low: 2.0,
+                close: 10.0,
+                volume: 2,
+            },
+            Day {
+                date: NaiveDate::from_ymd_opt(2024, 4, 3).unwrap(),
+                open: 3.0,
+                high: 3.0,
+                low: 3.0,
+                close: 20.0,
+                volume: 3,
+            },
+        ])
     }
 }
 

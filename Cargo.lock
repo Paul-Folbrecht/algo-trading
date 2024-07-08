@@ -298,6 +298,9 @@ name = "backtest"
 version = "0.1.0"
 dependencies = [
  "app-config",
+ "chrono",
+ "domain",
+ "reqwest",
  "services",
 ]
 

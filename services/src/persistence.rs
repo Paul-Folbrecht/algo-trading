@@ -24,6 +24,7 @@ pub fn new(url: String) -> Arc<impl PersistenceService> {
 
 mod implementation {
     use super::*;
+    use domain::domain::RealizedPnL;
     use mongodb::bson::{self, doc, Bson};
     use serde::Serialize;
     use std::any::Any;
@@ -87,6 +88,9 @@ mod implementation {
             } else if let Some(position) = p.as_any().downcast_ref::<Position>() {
                 let filter: bson::Document = doc! { "symbol": position.symbol.clone() };
                 self.upsert("positions", position.id(), filter, &position)
+            } else if let Some(pnl) = p.as_any().downcast_ref::<RealizedPnL>() {
+                let filter: bson::Document = doc! { "id": pnl.id() };
+                self.upsert("pnl", pnl.id(), filter, &pnl)
             } else {
                 Err(format!("Cannot handle unknown type: {:?}", p.type_id()))
             }

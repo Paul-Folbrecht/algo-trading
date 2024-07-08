@@ -20,6 +20,7 @@ fn test_create_order() {
         symbol: "SPY".to_string(),
         side: Side::Buy,
         quantity: 1,
+        px: Some(100.0),
     };
 
     match service.create_order(order.clone()) {

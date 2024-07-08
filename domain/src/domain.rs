@@ -19,12 +19,7 @@ pub struct Quote {
     pub askdate: DateTime<Local>,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct History {
-    pub day: Vec<Day>,
-}
-
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct Day {
     #[serde(with = "string_date_format")]
     pub date: NaiveDate,
@@ -81,6 +76,7 @@ pub struct Order {
     pub side: Side,
     // Integer quantity as we'll only trade equities
     pub quantity: i64,
+    pub px: Option<f64>,
 }
 
 impl Persistable for Order {
@@ -161,6 +157,26 @@ impl Persistable for Position {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RealizedPnL {
+    pub id: i64,
+    pub symbol: String,
+    #[serde(with = "millis_date_time_format")]
+    pub date: DateTime<Local>,
+    pub pnl: f64,
+    pub strategy: String,
+}
+
+impl Persistable for RealizedPnL {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn id(&self) -> i64 {
+        self.id
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Strategy {
     MeanReversion { symbols: Vec<String> },
@@ -187,18 +203,18 @@ impl Strategy {
 }
 
 impl StrategyHandler for Strategy {
-    fn handle(&self, _quote: &Quote, data: &SymbolData) -> Result<Signal, String> {
-        let quote = if _quote.symbol == "AAPL" {
-            Quote {
-                symbol: "AAPL".to_string(),
-                bid: 100.0,
-                ask: 100.0,
-                biddate: Local::now(),
-                askdate: Local::now(),
-            }
-        } else {
-            _quote.clone()
-        };
+    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String> {
+        // let quote = if _quote.symbol == "AAPL" {
+        //     Quote {
+        //         symbol: "AAPL".to_string(),
+        //         bid: 100.0,
+        //         ask: 100.0,
+        //         biddate: Local::now(),
+        //         askdate: Local::now(),
+        //     }
+        // } else {
+        //     _quote.clone()
+        // };
         match self {
             Strategy::MeanReversion { symbols } => {
                 if symbols.contains(&quote.symbol) {

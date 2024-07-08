@@ -103,6 +103,13 @@ mod implementation {
     }
 
     fn position_from(order: &Order, existing: Option<Position>) -> Position {
+        match order.side {
+            Side::Buy => position_from_buy(order, existing),
+            Side::Sell => position_from_sell(order, existing),
+        }
+    }
+
+    fn position_from_buy(order: &Order, existing: Option<Position>) -> Position {
         match existing {
             Some(position) => Position {
                 quantity: position.quantity + order.quantity,
@@ -115,10 +122,26 @@ mod implementation {
                     broker_id: None,
                     symbol: order.symbol.clone(),
                     quantity: order.quantity,
-                    cost_basis: 0.0,
+                    cost_basis: order.px.unwrap_or(0.0) * order.quantity as f64, // Estimate
                     date: Local::now(),
                 }
             }
+        }
+    }
+
+    fn position_from_sell(order: &Order, existing: Option<Position>) -> Position {
+        match existing {
+            Some(position) => {
+                assert!(
+                    order.quantity == position.quantity,
+                    "Attempted to sell more than owned"
+                );
+                Position {
+                    quantity: 0,
+                    ..position
+                }
+            }
+            None => panic!("Attempted unwind with no position: {:?}", order),
         }
     }
 

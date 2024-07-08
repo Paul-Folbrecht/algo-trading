@@ -10,6 +10,8 @@ pub struct AppConfig {
     pub sandbox: bool,
     pub mongo_url: String,
     pub strategies: Vec<Strategy>,
+    pub hist_data_range: i64,
+    pub backtest_range: i64,
 }
 
 impl From<ConfigHolder> for AppConfig {
@@ -21,6 +23,8 @@ impl From<ConfigHolder> for AppConfig {
             sandbox: holder.sandbox,
             mongo_url: holder.mongo_url,
             strategies: holder.strategies.into_iter().map(|s| s.into()).collect(),
+            hist_data_range: holder.hist_data_range,
+            backtest_range: holder.backtest_range,
         }
     }
 }
@@ -57,6 +61,8 @@ struct ConfigHolder {
     pub sandbox: bool,
     pub mongo_url: String,
     pub strategies: Vec<StrategyHolder>,
+    pub hist_data_range: i64,
+    pub backtest_range: i64,
 }
 
 #[derive(Deserialize)]
