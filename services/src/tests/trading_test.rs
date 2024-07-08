@@ -39,7 +39,8 @@ impl HistoricalDataService for MockHistoricalDataService {
 fn test_load_history() {
     let symbols = vec!["SPY".to_string()];
     let historical_data_service = Arc::new(MockHistoricalDataService {});
-    let data = load_history(&symbols, historical_data_service);
+    let date = Local::now().naive_local().date();
+    let data = load_history(date, &symbols, historical_data_service);
     let spy = data.get(&"SPY".to_string()).unwrap();
     assert_eq!(spy.mean, 13.333333333333334);
     assert_eq!(spy.std_dev, 4.714045207910316);
@@ -72,6 +73,7 @@ impl OrderService for MockOrderService {
 
 #[test]
 fn test_handle_quote() {
+    let date = Local::now().naive_local().date();
     let orders = Arc::new(MockOrderService {});
 
     let quote = Quote {
@@ -82,7 +84,7 @@ fn test_handle_quote() {
         askdate: Local::now(),
     };
 
-    match maybe_create_order(Signal::Buy, orders.get_position("SPY"), &quote, 10000) {
+    match maybe_create_order(date, Signal::Buy, orders.get_position("SPY"), &quote, 10000) {
         Some(order) => {
             assert_eq!(order.symbol, "SPY");
             // Capital of $10K - 100 shares * 80 = $2000 remaining capital = 25 shares at $80
@@ -92,7 +94,13 @@ fn test_handle_quote() {
         None => panic!("Expected an order"),
     }
 
-    match maybe_create_order(Signal::Sell, orders.get_position("SPY"), &quote, 10000) {
+    match maybe_create_order(
+        date,
+        Signal::Sell,
+        orders.get_position("SPY"),
+        &quote,
+        10000,
+    ) {
         Some(order) => {
             assert_eq!(order.symbol, "SPY");
             // We always unwind completely and have 100 shares, so any Sell signal should sell all
@@ -102,7 +110,13 @@ fn test_handle_quote() {
         None => panic!("Expected an order"),
     }
 
-    match maybe_create_order(Signal::None, orders.get_position("SPY"), &quote, 10000) {
+    match maybe_create_order(
+        date,
+        Signal::None,
+        orders.get_position("SPY"),
+        &quote,
+        10000,
+    ) {
         Some(_) => panic!("Expected no order"),
         None => {}
     }

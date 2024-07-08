@@ -4,8 +4,8 @@
 use app_config::app_config::AppConfig;
 
 mod backtest_historical_data;
+mod backtest_market_data_manager;
 mod backtest_service;
-mod market_data_manager;
 
 fn main() {
     let config = AppConfig::new().expect("Could not load config");

@@ -7,6 +7,7 @@ use std::{
 };
 
 use app_config::app_config::AppConfig;
+use chrono::Local;
 use services::persistence::PersistenceService;
 use services::trading::TradingService;
 use services::{historical_data, market_data, orders, trading};
@@ -40,10 +41,12 @@ fn main() {
     };
     let shutdown = Arc::new(AtomicBool::new(false));
     let mut symbols: HashSet<String> = HashSet::new();
+    let date = Local::now().naive_local().date();
 
     config.strategies.into_iter().for_each(|strategy| {
         symbols.extend(strategy.symbols.clone());
         let mut trading_service = trading::new(
+            date,
             strategy.name.clone(),
             strategy.symbols.clone(),
             strategy.capital.clone(),

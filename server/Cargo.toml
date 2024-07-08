@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 app-config = { path = "../app_config" }
 services = { path = "../services" }
+chrono = "0.4.38"

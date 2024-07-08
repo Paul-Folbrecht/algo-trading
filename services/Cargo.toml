@@ -8,13 +8,12 @@ edition = "2021"
 [dependencies]
 core = { path = "../core" }
 domain = { path = "../domain" }
+backoff = "0.4.0"
+chrono = "0.4.38"
 crossbeam-channel = "0.5.12"
 crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }
+mongodb = { version = "2.8.2", default-features = false, features = ["sync"] }
 reqwest = { version = "*", features = ["json", "blocking"] }
 serde = { version = "1.0.201", features = ["derive"] }
 serde_json = "1.0.117"
 tungstenite = { version = "0.21.0", features = ["native-tls"] }
-chrono = "0.4.38"
-mongodb = { version = "2.8.2", default-features = false, features = ["sync"] }
-backoff = "0.4.0"
-tokio = "1.38.0"

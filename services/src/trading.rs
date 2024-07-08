@@ -4,6 +4,7 @@ use std::sync::Arc;
 use crate::historical_data::HistoricalDataService;
 use crate::market_data::MarketDataService;
 use crate::orders::OrderService;
+use chrono::NaiveDate;
 use domain::domain::*;
 
 pub trait TradingService {
@@ -11,6 +12,7 @@ pub trait TradingService {
 }
 
 pub fn new(
+    today: NaiveDate, // The date we're trading for - if backtesting, this is not the current date
     strategy_name: String,
     symbols: Vec<String>,
     capital: HashMap<String, i64>,
@@ -19,6 +21,7 @@ pub fn new(
     orders: Arc<impl OrderService + 'static + Send + Sync>,
 ) -> impl TradingService + 'static {
     implementation::Trading {
+        today,
         strategy_name,
         symbols,
         capital,
@@ -32,7 +35,6 @@ pub fn new(
 mod implementation {
     use super::*;
     use crate::orders::OrderService;
-    use chrono::Local;
     use domain::domain::SymbolData;
     use std::{collections::HashMap, thread::JoinHandle};
 
@@ -41,6 +43,7 @@ mod implementation {
         H: HistoricalDataService + 'static + Send + Sync,
         O: OrderService + 'static + Send + Sync,
     > {
+        pub today: NaiveDate,
         pub strategy_name: String,
         pub symbols: Vec<String>,
         pub capital: HashMap<String, i64>,
@@ -62,7 +65,7 @@ mod implementation {
                 self.strategy_name
             );
             let symbol_data: HashMap<String, SymbolData> =
-                load_history(&self.symbols, self.historical_data.clone());
+                load_history(self.today, &self.symbols, self.historical_data.clone());
             let orders: Arc<O> = self.orders.clone();
 
             match self.market_data.subscribe() {
@@ -70,6 +73,7 @@ mod implementation {
                     println!("TradingService subscribed to MarketDataService");
                     let strategy = Strategy::new(&self.strategy_name, self.symbols.clone());
                     let capital = self.capital.clone();
+                    let date = self.today;
 
                     self.thread_handle = Some(std::thread::spawn(move || loop {
                         match rx.recv() {
@@ -77,6 +81,7 @@ mod implementation {
                                 let symbol_capital = capital.get(&quote.symbol).unwrap_or(&0);
                                 println!("TradingService received quote:\n{:?}", quote);
                                 handle_quote(
+                                    date,
                                     &symbol_data,
                                     &quote,
                                     *symbol_capital,
@@ -97,6 +102,7 @@ mod implementation {
     }
 
     pub fn handle_quote(
+        date: NaiveDate,
         symbol_data: &HashMap<String, SymbolData>,
         quote: &Quote,
         capital: i64,
@@ -106,13 +112,15 @@ mod implementation {
         if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
             let maybe_position = orders.get_position(&quote.symbol);
             match strategy.handle(&quote, symbol_data) {
-                Ok(signal) => match maybe_create_order(signal, maybe_position, quote, capital) {
-                    Some(order) => match orders.create_order(order.clone()) {
-                        Ok(o) => println!("Order created: {:?}", o),
-                        Err(e) => eprintln!("Error creating order: {}", e),
-                    },
-                    None => (),
-                },
+                Ok(signal) => {
+                    match maybe_create_order(date, signal, maybe_position, quote, capital) {
+                        Some(order) => match orders.create_order(order.clone()) {
+                            Ok(o) => println!("Order created: {:?}", o),
+                            Err(e) => eprintln!("Error creating order: {}", e),
+                        },
+                        None => (),
+                    }
+                }
                 Err(e) => eprintln!("Error from strategy: {}", e),
             }
         } else {
@@ -121,6 +129,7 @@ mod implementation {
     }
 
     pub fn maybe_create_order(
+        date: NaiveDate,
         signal: Signal,
         maybe_position: Option<Position>,
         quote: &Quote,
@@ -143,7 +152,7 @@ mod implementation {
                     n if n > 0 => Some(Order {
                         symbol: quote.symbol.clone(),
                         quantity: shares,
-                        date: Local::now().naive_local().date(),
+                        date: date,
                         side: Side::Buy,
                         broker_id: None,
                         px: Some(quote.ask),
@@ -161,7 +170,7 @@ mod implementation {
                     Some(p) => Some(Order {
                         symbol: quote.symbol.clone(),
                         quantity: p.quantity,
-                        date: Local::now().naive_local().date(),
+                        date: date,
                         side: Side::Sell,
                         broker_id: None,
                         px: Some(quote.bid),
@@ -181,13 +190,13 @@ mod implementation {
     }
 
     pub fn load_history(
+        end: NaiveDate,
         symbols: &Vec<String>,
         historical_data_service: Arc<impl HistoricalDataService + 'static>,
     ) -> HashMap<String, SymbolData> {
         symbols
             .iter()
             .map(|symbol| -> (String, SymbolData) {
-                let end = Local::now().naive_local().date();
                 let start = end - chrono::Duration::days(20);
                 println!("Loading history for {} from {} to {}", symbol, start, end);
                 let query: Result<Vec<Day>, reqwest::Error> =
