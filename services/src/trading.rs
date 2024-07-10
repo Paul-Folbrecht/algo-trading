@@ -34,8 +34,6 @@ pub fn new(
 
 mod implementation {
     use super::*;
-    use crate::orders::OrderService;
-    use domain::domain::SymbolData;
     use std::{collections::HashMap, thread::JoinHandle};
 
     pub struct Trading<

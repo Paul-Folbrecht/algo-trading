@@ -13,14 +13,14 @@ fn main() {
     let config = AppConfig::new().expect("Could not load config");
     println!("Config:\n{:?}", config);
 
-    let date = Local::now().naive_local().date();
+    let end = Local::now().naive_local().date();
     let historical_data = historical_data::new(config.access_token.clone());
     let backtest_historical_data = backtest_historical_data::new(
         config.access_token.clone(),
         config.all_symbols().clone(),
         config.backtest_range,
         config.hist_data_range,
-        date,
+        end,
         historical_data,
     );
 
@@ -28,7 +28,7 @@ fn main() {
         config.access_token.clone(),
         config.all_symbols().clone(),
         config.backtest_range,
-        date,
+        end,
         backtest_historical_data,
     );
 }

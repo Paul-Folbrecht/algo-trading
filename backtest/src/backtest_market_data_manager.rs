@@ -4,7 +4,7 @@ use services::{historical_data::HistoricalDataService, market_data::MarketDataSe
 use std::{collections::HashMap, sync::Arc};
 
 pub trait BacktestMarketDataManager {
-    fn service_for_date(&self, date: NaiveDate) -> Arc<dyn MarketDataService>;
+    fn service_for_date(&self, date: NaiveDate) -> Arc<impl MarketDataService + Send + Sync>;
 }
 
 pub fn new(
@@ -61,7 +61,7 @@ mod implementation {
     }
 
     impl BacktestMarketDataManager for BacktestMarketData {
-        fn service_for_date(&self, date: NaiveDate) -> Arc<dyn MarketDataService> {
+        fn service_for_date(&self, date: NaiveDate) -> Arc<impl MarketDataService + Send + Sync> {
             let quotes = self.quotes.get(&date).expect("No data for date").clone();
             Arc::new(BacktestMarketDataService { quotes })
         }
