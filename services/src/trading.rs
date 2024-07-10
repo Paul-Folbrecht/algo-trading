@@ -154,7 +154,7 @@ mod implementation {
                         quantity: shares,
                         date: date,
                         side: Side::Buy,
-                        broker_id: None,
+                        id: None,
                         px: Some(quote.ask),
                     }),
                     _ => {
@@ -172,7 +172,7 @@ mod implementation {
                         quantity: p.quantity,
                         date: date,
                         side: Side::Sell,
-                        broker_id: None,
+                        id: None,
                         px: Some(quote.bid),
                     }),
                     None => {

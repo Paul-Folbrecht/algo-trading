@@ -15,7 +15,7 @@ fn test_create_order() {
     )
     .expect("Failed to create OrdersService");
     let order = Order {
-        broker_id: None,
+        id: None,
         date: Local::now().naive_local().date(),
         symbol: "SPY".to_string(),
         side: Side::Buy,

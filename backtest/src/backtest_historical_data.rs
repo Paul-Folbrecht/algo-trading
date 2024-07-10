@@ -11,7 +11,7 @@ pub fn new(
     backtest_range: i64,
     hist_data_range: i64,
     end: NaiveDate,
-    underlying: Arc<impl HistoricalDataService + 'static + Send + Sync>,
+    underlying: Arc<impl HistoricalDataService + Send + Sync>,
 ) -> Arc<impl HistoricalDataService> {
     let start = end - chrono::Duration::days(backtest_range + hist_data_range);
     let history = symbols

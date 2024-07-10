@@ -7,7 +7,7 @@ use std::{thread, time::Duration};
 #[test]
 fn x() {
     let order = Order {
-        broker_id: Some(0),
+        id: Some(0),
         date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
         side: Buy,
         symbol: "SPY".to_string(),

@@ -69,7 +69,7 @@ pub trait Persistable {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Order {
-    pub broker_id: Option<i64>,
+    pub id: Option<i64>,
     #[serde(with = "string_date_format")]
     pub date: NaiveDate,
     pub symbol: String,
@@ -86,14 +86,14 @@ impl Persistable for Order {
     }
 
     fn id(&self) -> i64 {
-        self.broker_id.unwrap_or(0)
+        self.id.unwrap_or(0)
     }
 }
 
 impl Order {
     pub fn with_id(&self, id: i64) -> Self {
         Order {
-            broker_id: Some(id),
+            id: Some(id),
             ..self.clone()
         }
     }
