@@ -299,8 +299,13 @@ version = "0.1.0"
 dependencies = [
  "app-config",
  "chrono",
+ "core",
+ "crossbeam",
+ "crossbeam-channel",
  "domain",
  "reqwest",
+ "serde",
+ "serde_json",
  "services",
 ]
 

@@ -8,6 +8,7 @@ impl HistoricalDataService for MockHistoricalDataService {
     fn fetch(&self, _: &str, _: NaiveDate, _: NaiveDate) -> Result<Vec<Day>, reqwest::Error> {
         Ok(vec![
             Day {
+                symbol: Some("SPY".to_string()),
                 date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
                 open: 1.0,
                 high: 1.0,
@@ -16,6 +17,7 @@ impl HistoricalDataService for MockHistoricalDataService {
                 volume: 1,
             },
             Day {
+                symbol: Some("SPY".to_string()),
                 date: NaiveDate::from_ymd_opt(2024, 4, 2).unwrap(),
                 open: 2.0,
                 high: 2.0,
@@ -24,6 +26,7 @@ impl HistoricalDataService for MockHistoricalDataService {
                 volume: 2,
             },
             Day {
+                symbol: Some("SPY".to_string()),
                 date: NaiveDate::from_ymd_opt(2024, 4, 3).unwrap(),
                 open: 3.0,
                 high: 3.0,

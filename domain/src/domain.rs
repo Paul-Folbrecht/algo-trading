@@ -21,6 +21,7 @@ pub struct Quote {
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct Day {
+    pub symbol: Option<String>,
     #[serde(with = "string_date_format")]
     pub date: NaiveDate,
     pub open: f64,

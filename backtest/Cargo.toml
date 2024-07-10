@@ -7,7 +7,13 @@ edition = "2021"
 
 [dependencies]
 app-config = { path = "../app_config" }
+core = { path = "../core" }
 domain = { path = "../domain" }
 services = { path = "../services" }
+
 chrono = "0.4.38"
+crossbeam-channel = "0.5.12"
+crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }
 reqwest = { version = "*", features = ["json", "blocking"] }
+serde = { version = "1.0.201", features = ["derive"] }
+serde_json = "1.0.117"

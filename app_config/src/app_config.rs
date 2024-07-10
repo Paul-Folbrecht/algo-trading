@@ -14,6 +14,15 @@ pub struct AppConfig {
     pub backtest_range: i64,
 }
 
+impl AppConfig {
+    pub fn all_symbols(&self) -> Vec<String> {
+        self.strategies
+            .iter()
+            .flat_map(|s| s.symbols.clone())
+            .collect()
+    }
+}
+
 impl From<ConfigHolder> for AppConfig {
     fn from(holder: ConfigHolder) -> Self {
         AppConfig {

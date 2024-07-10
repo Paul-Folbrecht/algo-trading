@@ -1,31 +1,6 @@
 use super::*;
 use chrono::NaiveDate;
-use domain::domain::Day;
-
-struct MockHistoricalDataService {
-    pub end: NaiveDate,
-}
-
-impl HistoricalDataService for MockHistoricalDataService {
-    fn fetch(&self, _: &str, _: NaiveDate, _: NaiveDate) -> Result<Vec<Day>, reqwest::Error> {
-        let backtest_range = 20;
-        let hist_data_range = 4;
-        let start = self.end - chrono::Duration::days(backtest_range + hist_data_range);
-        let mut days = Vec::with_capacity((backtest_range + hist_data_range) as usize);
-        for i in 0..=backtest_range + hist_data_range {
-            days.push(Day {
-                date: start + chrono::Duration::days(i),
-                open: 1.0,
-                high: 1.0,
-                low: 1.0,
-                close: (100 + i) as f64,
-                volume: 10000,
-            });
-        }
-        println!("\n\ndata:\n{:?}", days);
-        Ok(days)
-    }
-}
+use mock_historical_data_service::MockHistoricalDataService;
 
 #[test]
 fn test_windowing() {

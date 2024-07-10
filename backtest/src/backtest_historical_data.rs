@@ -72,3 +72,5 @@ mod implementation {
 #[cfg(test)]
 #[path = "./tests/backtest_historical_data_test.rs"]
 mod backtest_historical_data_test;
+#[path = "./tests/mock_historical_data_service.rs"]
+mod mock_historical_data_service;
