@@ -112,10 +112,12 @@ mod implementation {
             match strategy.handle(&quote, symbol_data) {
                 Ok(signal) => {
                     match maybe_create_order(date, signal, maybe_position, quote, capital) {
-                        Some(order) => match orders.create_order(order.clone()) {
-                            Ok(o) => println!("Order created: {:?}", o),
-                            Err(e) => eprintln!("Error creating order: {}", e),
-                        },
+                        Some(order) => {
+                            match orders.create_order(order.clone(), strategy.to_string()) {
+                                Ok(o) => println!("Order created: {:?}", o),
+                                Err(e) => eprintln!("Error creating order: {}", e),
+                            }
+                        }
                         None => (),
                     }
                 }

@@ -7,6 +7,7 @@ use services::historical_data;
 
 mod backtest_historical_data;
 mod backtest_market_data_manager;
+mod backtest_orders;
 mod backtest_service;
 
 fn main() {

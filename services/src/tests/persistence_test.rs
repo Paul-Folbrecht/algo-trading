@@ -5,7 +5,7 @@ use domain::domain::{RealizedPnL, Side::Buy};
 use std::{thread, time::Duration};
 
 #[test]
-fn x() {
+fn test_persistence() {
     let order = Order {
         id: Some(0),
         date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
@@ -26,7 +26,7 @@ fn x() {
     let pnl = RealizedPnL {
         id: 1000,
         symbol: "SPY".to_string(),
-        date: Local::now(),
+        date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
         pnl: 100.0,
         strategy: "mean-reversion".to_string(),
     };

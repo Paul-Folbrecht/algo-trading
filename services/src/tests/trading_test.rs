@@ -51,7 +51,7 @@ fn test_load_history() {
 
 struct MockOrderService {}
 impl OrderService for MockOrderService {
-    fn create_order(&self, order: Order) -> Result<Order, String> {
+    fn create_order(&self, order: Order, _: String) -> Result<Order, String> {
         Ok(order.with_id(1000))
     }
 

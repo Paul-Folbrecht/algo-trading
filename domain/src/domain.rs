@@ -3,7 +3,7 @@ use core::serde::{millis_date_time_format, rfc_3339_date_time_format, string_dat
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
-    fmt::{Display, Formatter},
+    fmt::{self, Display, Formatter},
 };
 
 use crate::serde::side_format;
@@ -162,8 +162,8 @@ impl Persistable for Position {
 pub struct RealizedPnL {
     pub id: i64,
     pub symbol: String,
-    #[serde(with = "millis_date_time_format")]
-    pub date: DateTime<Local>,
+    #[serde(with = "string_date_format")]
+    pub date: NaiveDate,
     pub pnl: f64,
     pub strategy: String,
 }
@@ -178,11 +178,6 @@ impl Persistable for RealizedPnL {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum Strategy {
-    MeanReversion { symbols: Vec<String> },
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Signal {
     Buy,
@@ -190,8 +185,9 @@ pub enum Signal {
     None,
 }
 
-pub trait StrategyHandler {
-    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String>;
+#[derive(Debug, Clone)]
+pub enum Strategy {
+    MeanReversion { symbols: Vec<String> },
 }
 
 impl Strategy {
@@ -201,6 +197,16 @@ impl Strategy {
             _ => panic!("Unknown strategy: {}", name),
         }
     }
+}
+
+impl Display for Strategy {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+pub trait StrategyHandler {
+    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String>;
 }
 
 impl StrategyHandler for Strategy {
