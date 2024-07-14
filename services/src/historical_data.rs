@@ -79,7 +79,18 @@ mod implementation {
             .send()
         {
             Ok(response) => match response.json::<implementation::HistoryResponse>() {
-                Ok(history) => Ok(history.history.day),
+                Ok(history) => {
+                    let with_symbols = history
+                        .history
+                        .day
+                        .iter()
+                        .map(|day| Day {
+                            symbol: Some(symbol.to_string()),
+                            ..day.clone()
+                        })
+                        .collect();
+                    Ok(with_symbols)
+                }
                 Err(e) => {
                     eprintln!("Failed to deserialize: {}", e);
                     Err(e)

@@ -28,7 +28,7 @@ pub fn new(
             .earliest()
             .expect("Failed to convert date to datetime");
         quotes.entry(day.date).or_insert_with(Vec::new).push(Quote {
-            symbol: day.symbol.expect("Mising symbol").clone(),
+            symbol: day.symbol.expect("Missing symbol").clone(),
             bid: day.close,
             ask: day.close,
             biddate: date,

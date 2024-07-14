@@ -30,7 +30,7 @@ fn main() {
 
     let backtest_market_data_manager = backtest_market_data_manager::new(
         config.access_token.clone(),
-        config.all_symbols().clone(),
+        symbols.clone(),
         config.backtest_range,
         end,
         backtest_historical_data,
