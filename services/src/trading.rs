@@ -194,15 +194,12 @@ mod implementation {
         symbols: &Vec<String>,
         historical_data_service: Arc<impl HistoricalDataService + 'static>,
     ) -> HashMap<String, SymbolData> {
+        let data = historical_data_service.fetch(end);
         symbols
             .iter()
             .map(|symbol| -> (String, SymbolData) {
-                let start = end - chrono::Duration::days(20);
-                println!("Loading history for {} from {} to {}", symbol, start, end);
-                let query: Result<Vec<Day>, reqwest::Error> =
-                    historical_data_service.fetch(symbol, start, end);
-                match query {
-                    Ok(history) => {
+                let var_name = match data.get(symbol) {
+                    Some(history) => {
                         let sum = history.iter().map(|day| day.close).sum::<f64>();
                         let len = history.len() as f64;
                         let mean = sum / len;
@@ -214,15 +211,16 @@ mod implementation {
                         let std_dev = variance.sqrt();
                         let data = SymbolData {
                             symbol: symbol.clone(),
-                            history,
+                            history: history.to_vec(),
                             mean,
                             std_dev,
                         };
-                        println!("Loaded history for {}: {:?}", symbol, data);
+                        println!("Initted history for {}: {:?}", symbol, data);
                         (symbol.to_owned(), data)
                     }
-                    Err(e) => panic!("Can't load history for {}: {}", symbol, e),
-                }
+                    None => panic!("No history for {}", symbol),
+                };
+                var_name
             })
             .into_iter()
             .collect()

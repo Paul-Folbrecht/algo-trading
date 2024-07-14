@@ -15,13 +15,16 @@ fn main() {
     println!("Config:\n{:?}", config);
 
     let end = Local::now().naive_local().date();
-    let historical_data = historical_data::new(config.access_token.clone());
-    let backtest_historical_data = backtest_historical_data::new(
+    let symbols = config.all_symbols();
+    let historical_data = historical_data::new(
         config.access_token.clone(),
-        config.all_symbols().clone(),
+        symbols.clone(),
+        config.backtest_range + config.hist_data_range,
+        end,
+    );
+    let backtest_historical_data = backtest_historical_data::new(
         config.backtest_range,
         config.hist_data_range,
-        end,
         historical_data,
     );
 

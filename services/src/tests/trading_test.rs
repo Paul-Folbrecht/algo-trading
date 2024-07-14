@@ -5,8 +5,8 @@ use implementation::*;
 
 struct MockHistoricalDataService {}
 impl HistoricalDataService for MockHistoricalDataService {
-    fn fetch(&self, _: &str, _: NaiveDate, _: NaiveDate) -> Result<Vec<Day>, reqwest::Error> {
-        Ok(vec![
+    fn fetch(&self, _: NaiveDate) -> Arc<HashMap<String, Vec<Day>>> {
+        let days = vec![
             Day {
                 symbol: Some("SPY".to_string()),
                 date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
@@ -34,7 +34,10 @@ impl HistoricalDataService for MockHistoricalDataService {
                 close: 20.0,
                 volume: 3,
             },
-        ])
+        ];
+        let mut map = HashMap::new();
+        map.insert("SPY".to_string(), days);
+        Arc::new(map)
     }
 }
 
@@ -69,7 +72,7 @@ impl OrderService for MockOrderService {
         }
     }
 
-    fn update_position(&self, position: &Position) {
+    fn update_position(&self, _: &Position) {
         unimplemented!()
     }
 }

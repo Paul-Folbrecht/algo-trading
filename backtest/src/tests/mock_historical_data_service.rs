@@ -1,3 +1,5 @@
+use std::{collections::HashMap, sync::Arc};
+
 use chrono::{Datelike, NaiveDate};
 use domain::domain::Day;
 use services::historical_data::HistoricalDataService;
@@ -7,7 +9,7 @@ pub struct MockHistoricalDataService {
 }
 
 impl HistoricalDataService for MockHistoricalDataService {
-    fn fetch(&self, _: &str, _: NaiveDate, _: NaiveDate) -> Result<Vec<Day>, reqwest::Error> {
+    fn fetch(&self, end: NaiveDate) -> Arc<HashMap<String, Vec<Day>>> {
         let backtest_range = 20;
         let hist_data_range = 4;
         let start = self.end - chrono::Duration::days(backtest_range + hist_data_range);
@@ -24,6 +26,8 @@ impl HistoricalDataService for MockHistoricalDataService {
                 volume: 10000,
             });
         }
-        Ok(days)
+        let mut map = HashMap::new();
+        map.insert("SPY".to_string(), days);
+        Arc::new(map)
     }
 }

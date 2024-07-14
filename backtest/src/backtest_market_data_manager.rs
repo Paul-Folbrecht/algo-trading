@@ -14,20 +14,10 @@ pub fn new(
     end: NaiveDate,
     underlying: Arc<impl HistoricalDataService + Send + Sync>,
 ) -> Arc<impl BacktestMarketDataManager> {
-    let start = end - Duration::days(backtest_range + 1);
-
-    let history = symbols
-        .iter()
-        .map(|symbol| {
-            let data: Vec<Day> = underlying
-                .fetch(symbol, start, end)
-                .expect("Failed to fetch historical data");
-            data
-        })
-        .flatten()
-        .collect::<Vec<Day>>();
+    // We need to turn a map of symbol->days into a map of date->quotes
+    let history: Vec<Day> = underlying.fetch(end).values().flatten().cloned().collect();
     // @todo verify that the data is sorted by date
-    println!("\n\nhistory:\n{:?}", history);
+    println!("\n\nBacktestMarketDataManager: history:\n{:?}", history);
 
     let mut quotes: HashMap<NaiveDate, Vec<Quote>> = HashMap::new();
     for day in history {
