@@ -56,7 +56,8 @@ mod implementation {
                             }
                         },
                         Err(e) => {
-                            eprintln!("Channel shut down: {:?}", e);
+                            eprintln!("PersistenceService: Channel shut down: {:?}", e);
+                            break;
                         }
                     }
                 }

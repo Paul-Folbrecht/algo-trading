@@ -5,8 +5,6 @@ use domain::domain::Day;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
 
-// hist service fetches on init, all symbols, map symbol to vec of days
-// fetch() takes end date; range is from config
 pub trait HistoricalDataService {
     fn fetch(&self, end: NaiveDate) -> Arc<HashMap<String, Vec<Day>>>;
 }
@@ -31,6 +29,7 @@ pub fn fetch(
     end: NaiveDate,
 ) -> HashMap<String, Vec<Day>> {
     let start = end - chrono::Duration::days(range);
+    println!("Fetching historical data from {} to {}", start, end);
     symbols
         .iter()
         .map(|symbol| {

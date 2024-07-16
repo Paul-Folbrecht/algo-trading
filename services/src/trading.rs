@@ -9,6 +9,7 @@ use domain::domain::*;
 
 pub trait TradingService {
     fn run(&mut self) -> Result<(), String>;
+    fn shutdown(&mut self) -> Result<(), String>;
 }
 
 pub fn new(
@@ -88,7 +89,8 @@ mod implementation {
                                 );
                             }
                             Err(e) => {
-                                eprintln!("Channel shut down: {}", e);
+                                eprintln!("TradingService: Market Data channel shut down: {}", e);
+                                break;
                             }
                         }
                     }))
@@ -96,6 +98,15 @@ mod implementation {
                 Err(e) => return Err(format!("Failed to subscribe to MarketDataService: {}", e)),
             }
             Ok(())
+        }
+
+        fn shutdown(&mut self) -> Result<(), String> {
+            //self.market_data.unsubscribe().unwrap();
+            self.thread_handle
+                .take()
+                .map(|h| h.join().unwrap())
+                .map(|_| println!("TradingService shut down"))
+                .ok_or("No thread handle to join".to_string())
         }
     }
 
@@ -152,7 +163,7 @@ mod implementation {
                     n if n > 0 => Some(Order {
                         symbol: quote.symbol.clone(),
                         quantity: shares,
-                        date: date,
+                        date,
                         side: Side::Buy,
                         id: None,
                         px: Some(quote.ask),
@@ -170,7 +181,7 @@ mod implementation {
                     Some(p) => Some(Order {
                         symbol: quote.symbol.clone(),
                         quantity: p.quantity,
-                        date: date,
+                        date,
                         side: Side::Sell,
                         id: None,
                         px: Some(quote.bid),
@@ -215,7 +226,7 @@ mod implementation {
                             mean,
                             std_dev,
                         };
-                        println!("Initted history for {}: {:?}", symbol, data);
+                        println!("Initted history for {}", symbol);
                         (symbol.to_owned(), data)
                     }
                     None => panic!("No history for {}", symbol),

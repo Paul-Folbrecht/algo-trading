@@ -1,10 +1,15 @@
-use chrono::{DateTime, Duration, Local, NaiveDate, NaiveTime};
+use crate::backtest_historical_data::BacktestHistoricalDataManager;
+use chrono::{DateTime, Local, NaiveDate, NaiveTime};
+use core::util::print_map;
 use domain::domain::{Day, Quote};
-use services::{historical_data::HistoricalDataService, market_data::MarketDataService};
+use services::market_data::MarketDataService;
 use std::{collections::HashMap, sync::Arc};
 
 pub trait BacktestMarketDataManager {
-    fn service_for_date(&self, date: NaiveDate) -> Arc<impl MarketDataService + Send + Sync>;
+    fn service_for_date(
+        &self,
+        date: NaiveDate,
+    ) -> Result<Arc<impl MarketDataService + 'static + Send + Sync>, String>;
 }
 
 pub fn new(
@@ -12,11 +17,15 @@ pub fn new(
     symbols: Vec<String>,
     backtest_range: i64,
     end: NaiveDate,
-    underlying: Arc<impl HistoricalDataService + Send + Sync>,
+    backtest_historical_data: Arc<impl BacktestHistoricalDataManager + Send + Sync>,
 ) -> Arc<impl BacktestMarketDataManager> {
     // We need to turn a map of symbol->days into a map of date->quotes
-    let history: Vec<Day> = underlying.fetch(end).values().flatten().cloned().collect();
-    // @todo verify that the data is sorted by date
+    let history: Vec<Day> = backtest_historical_data
+        .all()
+        .values()
+        .flatten()
+        .cloned()
+        .collect();
     println!("\n\nBacktestMarketDataManager: history:\n{:?}", history);
 
     let mut quotes: HashMap<NaiveDate, Vec<Quote>> = HashMap::new();
@@ -35,7 +44,7 @@ pub fn new(
             askdate: date,
         })
     }
-    println!("\n\nquotes:\n{:?}", quotes);
+    print_map("Quotes", &quotes);
 
     Arc::new(implementation::BacktestMarketData { quotes })
 }
@@ -51,9 +60,16 @@ mod implementation {
     }
 
     impl BacktestMarketDataManager for BacktestMarketData {
-        fn service_for_date(&self, date: NaiveDate) -> Arc<impl MarketDataService + Send + Sync> {
-            let quotes = self.quotes.get(&date).expect("No data for date").clone();
-            Arc::new(BacktestMarketDataService { quotes })
+        fn service_for_date(
+            &self,
+            date: NaiveDate,
+        ) -> Result<Arc<impl MarketDataService + 'static + Send + Sync>, String> {
+            match self.quotes.get(&date) {
+                Some(quotes) => Ok(Arc::new(BacktestMarketDataService {
+                    quotes: quotes.clone(),
+                })),
+                None => Err(format!("No quotes for date {}", date)),
+            }
         }
     }
 
@@ -62,6 +78,14 @@ mod implementation {
     }
 
     impl MarketDataService for BacktestMarketDataService {
+        fn init(
+            &self,
+            shutdown: Arc<std::sync::atomic::AtomicBool>,
+            symbols: Vec<String>,
+        ) -> Result<std::thread::JoinHandle<()>, String> {
+            Err("Please don't call this method".to_string())
+        }
+
         fn subscribe(&self) -> Result<Receiver<Quote>, String> {
             let (sender, receiver) = crossbeam_channel::unbounded();
             self.quotes
@@ -71,14 +95,6 @@ mod implementation {
                     Err(e) => eprintln!("Error sending quote to subscriber: {}", e),
                 });
             Ok(receiver)
-        }
-
-        fn init(
-            &self,
-            shutdown: Arc<std::sync::atomic::AtomicBool>,
-            symbols: Vec<String>,
-        ) -> Result<std::thread::JoinHandle<()>, String> {
-            Err("Please don't call this method".to_string())
         }
 
         fn unsubscribe(&self, subscriber: Receiver<Quote>) -> Result<(), String> {

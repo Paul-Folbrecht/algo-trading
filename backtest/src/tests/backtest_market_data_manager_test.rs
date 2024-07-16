@@ -1,5 +1,5 @@
 use super::*;
-use chrono::Datelike;
+use chrono::{Datelike, Duration};
 use mock_historical_data_service::MockHistoricalDataService;
 
 #[test]

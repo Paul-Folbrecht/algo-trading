@@ -5,14 +5,18 @@ use domain::domain::Day;
 use services::historical_data::HistoricalDataService;
 use std::collections::HashMap;
 
-// backtest hist service uses same method to init, wider time range
-// backtest hist service fetch() just filters
+pub trait BacktestHistoricalDataManager: HistoricalDataService {
+    fn all(&self) -> Arc<HashMap<String, Vec<Day>>>;
+}
+
 pub fn new(
+    end: NaiveDate,
     range: i64,
     hist_data_range: i64,
     underlying: Arc<impl HistoricalDataService + 'static + Send + Sync>,
-) -> Arc<impl HistoricalDataService> {
+) -> Arc<impl BacktestHistoricalDataManager> {
     Arc::new(implementation::BacktestHistoricalData {
+        end,
         range,
         hist_data_range,
         underlying,
@@ -23,9 +27,18 @@ mod implementation {
     use super::*;
 
     pub struct BacktestHistoricalData<H: HistoricalDataService + 'static + Send + Sync> {
+        pub end: NaiveDate,
         pub range: i64,
         pub hist_data_range: i64,
         pub underlying: Arc<H>,
+    }
+
+    impl<H: HistoricalDataService + 'static + Send + Sync> BacktestHistoricalDataManager
+        for BacktestHistoricalData<H>
+    {
+        fn all(&self) -> Arc<HashMap<String, Vec<Day>>> {
+            self.underlying.fetch(self.end).clone()
+        }
     }
 
     impl<H: HistoricalDataService + 'static + Send + Sync> HistoricalDataService

@@ -38,7 +38,7 @@ impl From<ConfigHolder> for AppConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Strategy {
     pub name: String,
     pub symbols: Vec<String>,

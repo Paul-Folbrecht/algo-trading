@@ -27,6 +27,8 @@ pub fn new(
 }
 
 mod implementation {
+    use services::trading::{self, TradingService};
+
     use super::*;
 
     pub struct Backtest<
@@ -49,32 +51,57 @@ mod implementation {
         > BacktestService for Backtest<H, M, O>
     {
         // - For each date in range:
-        //     - Construct BacktestMarketDataService from MarketDataManager data; use single BacktestHistoricalDataService
-        //     - run() strategies - will subscribe to MarketDataService and be fed quotes
-        //   - Report Realized PnL, open positions from OrderService
+        //   - Construct BacktestMarketDataService from MarketDataManager data; use single BacktestHistoricalDataService
+        //   - run() strategies - will subscribe to MarketDataService and be fed quotes
+        // - Report Realized PnL, open positions from OrderService
         fn run(&self) -> Result<(), String> {
-            println!("Running backtest");
             let start = self.end - chrono::Duration::days(self.backtest_range);
-            //let mut days = Vec::with_capacity((backtest_range + hist_data_range) as usize);
+            println!("Running backtest from {} to {}", start, self.end);
+
             for i in 0..=self.backtest_range {
                 let date = start + chrono::Duration::days(i);
-                let market_data = self.market_data_manager.service_for_date(date);
+
+                println!("\n\nRunning for {}", date);
+                match self.market_data_manager.service_for_date(date) {
+                    Ok(market_data) => {
+                        self.strategies.clone().into_iter().for_each(|strategy| {
+                            let mut trading_service = trading::new(
+                                date,
+                                strategy.name.clone(),
+                                strategy.symbols.clone(),
+                                strategy.capital.clone(),
+                                market_data.clone(),
+                                self.historical_data.clone(),
+                                self.orders.clone(),
+                            );
+
+                            match trading_service.run() {
+                                Ok(_) => {
+                                    println!(
+                                        "Strategy '{}' ran successfully for {}",
+                                        strategy.name, date
+                                    );
+                                    trading_service
+                                        .shutdown()
+                                        .expect("Unexpected error shutting down trading_service");
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "Error starting TradingService {}: {}",
+                                        strategy.name, e
+                                    )
+                                }
+                            }
+                        });
+                    }
+                    Err(_) => {
+                        eprintln!("Skipping {} - no data (weekend or holiday)", date);
+                        continue;
+                    }
+                }
             }
-            // let orders: impl OrderService = todo!();
-            // let trading_service = self.strategies.into_iter().for_each(|strategy| {
-            //     let date = self.end;
-            //     let market_data = self.market_data_manager.service_for_date(date);
-            //     let mut trading_service = trading::new(
-            //         date,
-            //         strategy.name.clone(),
-            //         strategy.symbols.clone(),
-            //         strategy.capital.clone(),
-            //         market_data.clone(),
-            //         self.historical_data,
-            //         orders,
-            //     );
-            // });
-            Ok(())
+
+            Ok(()) // @todo return Pnl & positions
         }
     }
 }
