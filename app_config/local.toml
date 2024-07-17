@@ -2,10 +2,10 @@ sandbox = true
 access_token = "RX0IJTkJdbCoS2L5km6RiClQuK9X"
 sandbox_token = "ywVWpNLzVRHnVSBhFWS2u71x2Wai"
 account_id = "VA4503134"
-hist_data_range = 5
-backtest_range = 20
+hist_data_range = 20
+backtest_range = 730
 
 [[strategies]]
 name = "mean-reversion"
 symbols = ["AAPL", "AMZN"]
-capital = [100000, 10000]
+capital = [10000, 10000]

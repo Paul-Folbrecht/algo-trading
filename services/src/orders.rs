@@ -154,14 +154,19 @@ pub mod implementation {
     }
 
     pub fn calc_pnl(position: Position, order: &Order, strategy: String) -> RealizedPnL {
-        let proceeds = order.px.unwrap_or(0.0) * order.quantity as f64;
+        let price = order.px.unwrap_or(0.0);
+        let proceeds = price * order.quantity as f64;
         let pnl = proceeds - position.cost_basis;
 
+        println!(
+            "Calced Realized P&L; proceeds: {}; cost basis: {}; pnl: {}; price: {}; quantity: {}",
+            proceeds, position.cost_basis, pnl, price, order.quantity
+        );
         RealizedPnL {
             id: order.id(),
             symbol: order.symbol.clone(),
             date: order.date,
-            pnl: pnl,
+            pnl,
             strategy: strategy.to_string(),
         }
     }

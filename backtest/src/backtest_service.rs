@@ -27,9 +27,8 @@ pub fn new(
 }
 
 mod implementation {
-    use services::trading::{self, TradingService};
-
     use super::*;
+    use services::trading::{self, TradingService};
 
     pub struct Backtest<
         H: HistoricalDataService + 'static + Send + Sync,

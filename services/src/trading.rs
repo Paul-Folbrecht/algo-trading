@@ -178,7 +178,7 @@ mod implementation {
             Signal::Sell => {
                 // If we have a position, unwind it all
                 match maybe_position {
-                    Some(p) => Some(Order {
+                    Some(p) if p.quantity > 0 => Some(Order {
                         symbol: quote.symbol.clone(),
                         quantity: p.quantity,
                         date,
@@ -186,7 +186,7 @@ mod implementation {
                         id: None,
                         px: Some(quote.bid),
                     }),
-                    None => {
+                    _ => {
                         println!(
                             "Sell signal for {}, but no position to unwind",
                             quote.symbol

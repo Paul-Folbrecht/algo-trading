@@ -4,6 +4,7 @@
 use app_config::app_config::AppConfig;
 use backtest_service::BacktestService;
 use chrono::Local;
+use core::util::time;
 use services::historical_data;
 
 mod backtest_historical_data;
@@ -49,8 +50,8 @@ fn main() {
         config.strategies.clone(),
     );
 
-    match backtest_service.run() {
+    time("backtest_service.run()", || match backtest_service.run() {
         Ok(_) => println!("Backtest completed successfully"),
         Err(e) => eprintln!("Backtest failed: {}", e),
-    }
+    })
 }
