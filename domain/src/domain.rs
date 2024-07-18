@@ -241,17 +241,17 @@ impl StrategyHandler for Strategy {
 
                     if buy {
                         println!("***Buy signal for {}***", quote.symbol);
-                        return Ok(Signal::Buy);
+                        Ok(Signal::Buy)
                     } else if sell {
                         println!("***Sell signal for {}***", quote.symbol);
-                        return Ok(Signal::Sell);
+                        Ok(Signal::Sell)
                     } else {
                         println!("No signal for {}", quote.symbol);
-                        return Ok(Signal::None);
+                        Ok(Signal::None)
                     }
                 } else {
                     println!("Symbol {} not in strategy", quote.symbol);
-                    return Ok(Signal::None);
+                    Ok(Signal::None)
                 }
             }
         }

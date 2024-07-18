@@ -1,8 +1,14 @@
+use domain::domain::*;
 use services::orders::OrderService;
 use std::sync::Arc;
 use std::{collections::HashMap, sync::Mutex};
 
-pub fn new() -> Arc<impl OrderService + Send + Sync> {
+pub trait BacktestOrderService: OrderService {
+    fn open_positions(&self) -> Vec<Position>;
+    fn realized_pnl(&self) -> Vec<RealizedPnL>;
+}
+
+pub fn new() -> Arc<impl BacktestOrderService + Send + Sync> {
     Arc::new(implementation::BacktestOrders {
         positions: Arc::new(Mutex::new(HashMap::new())),
         pnl: Arc::new(Mutex::new(Vec::new())),
@@ -11,12 +17,27 @@ pub fn new() -> Arc<impl OrderService + Send + Sync> {
 
 mod implementation {
     use super::*;
-    use domain::domain::*;
     use services::orders::implementation::*;
 
     pub struct BacktestOrders {
         pub positions: Arc<Mutex<HashMap<String, Position>>>,
         pub pnl: Arc<Mutex<Vec<RealizedPnL>>>,
+    }
+
+    impl BacktestOrderService for BacktestOrders {
+        fn open_positions(&self) -> Vec<Position> {
+            self.positions
+                .lock()
+                .unwrap()
+                .values()
+                .filter(|p| p.quantity > 0)
+                .cloned()
+                .collect()
+        }
+
+        fn realized_pnl(&self) -> Vec<RealizedPnL> {
+            self.pnl.lock().unwrap().clone()
+        }
     }
 
     impl OrderService for BacktestOrders {

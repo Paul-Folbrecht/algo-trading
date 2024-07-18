@@ -102,15 +102,15 @@ mod implementation {
             let subscriber = receiver.clone();
             self.subscribers
                 .lock()
-                .and_then(|mut s| Ok(s.push((sender, receiver))))
+                .map(|mut s| s.push((sender, receiver)))
                 .map_err(|e| e.to_string())
-                .and_then(|_| Ok(subscriber))
+                .map(|_| subscriber)
         }
 
         fn unsubscribe(&self, subscriber: Receiver<Quote>) -> Result<(), String> {
             match self.subscribers.lock() {
                 Ok(mut guard) => {
-                    let subscribers: &mut Vec<(Sender<Quote>, Receiver<Quote>)> = &mut *guard;
+                    let subscribers: &mut Vec<(Sender<Quote>, Receiver<Quote>)> = &mut guard;
                     if let Some(index) = subscribers
                         .iter()
                         .position(|(_, r)| std::ptr::eq(r, &subscriber))
@@ -118,26 +118,22 @@ mod implementation {
                         subscribers.remove(index);
                         Ok(())
                     } else {
-                        return Err("No such subscriber found".to_string());
+                        Err("No such subscriber found".to_string())
                     }
                 }
-                Err(e) => return Err(e.to_string()),
+                Err(e) => Err(e.to_string()),
             }
         }
     }
 
     fn authenticate(access_token: &str) -> reqwest::Result<AuthResponse> {
-        match reqwest::blocking::Client::new()
+        reqwest::blocking::Client::new()
             .post("https://api.tradier.com/v1/markets/events/session")
             .header(AUTHORIZATION, format!("Bearer {}", access_token))
             .header(ACCEPT, "application/json")
             .header(CONTENT_LENGTH, "0")
             .send()?
             .json::<AuthResponse>()
-        {
-            Ok(r) => Ok(r),
-            Err(e) => Err(e),
-        }
     }
 }
 

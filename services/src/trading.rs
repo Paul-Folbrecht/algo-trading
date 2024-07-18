@@ -122,14 +122,13 @@ mod implementation {
             let maybe_position = orders.get_position(&quote.symbol);
             match strategy.handle(&quote, symbol_data) {
                 Ok(signal) => {
-                    match maybe_create_order(date, signal, maybe_position, quote, capital) {
-                        Some(order) => {
-                            match orders.create_order(order.clone(), strategy.to_string()) {
-                                Ok(o) => println!("Order created: {:?}", o),
-                                Err(e) => eprintln!("Error creating order: {}", e),
-                            }
+                    if let Some(order) =
+                        maybe_create_order(date, signal, maybe_position, quote, capital)
+                    {
+                        match orders.create_order(order.clone(), strategy.to_string()) {
+                            Ok(o) => println!("Order created: {:?}", o),
+                            Err(e) => eprintln!("Error creating order: {}", e),
                         }
-                        None => (),
                     }
                 }
                 Err(e) => eprintln!("Error from strategy: {}", e),
@@ -202,7 +201,7 @@ mod implementation {
 
     pub fn load_history(
         end: NaiveDate,
-        symbols: &Vec<String>,
+        symbols: &[String],
         historical_data_service: Arc<impl HistoricalDataService + 'static>,
     ) -> HashMap<String, SymbolData> {
         let data = historical_data_service.fetch(end);
@@ -233,7 +232,6 @@ mod implementation {
                 };
                 var_name
             })
-            .into_iter()
             .collect()
     }
 }

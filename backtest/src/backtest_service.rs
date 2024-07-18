@@ -60,7 +60,7 @@ mod implementation {
             for i in 0..=self.backtest_range {
                 let date = start + chrono::Duration::days(i);
 
-                println!("\n\nRunning for {}", date);
+                println!("\nRunning for {}", date);
                 match self.market_data_manager.service_for_date(date) {
                     Ok(market_data) => {
                         self.strategies.clone().into_iter().for_each(|strategy| {

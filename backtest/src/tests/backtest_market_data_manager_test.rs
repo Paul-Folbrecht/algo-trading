@@ -22,7 +22,9 @@ fn test_backtest_market_data_manager() {
     while date <= end_date {
         println!("{:?}", date);
         date += Duration::days(1);
-        let market_data = service.service_for_date(date);
+        let market_data = service
+            .service_for_date(date)
+            .expect(format!("Could not get market data for {}", date).as_str());
         let receiver = market_data.subscribe().expect("Failed to subscribe");
         let quote = receiver.recv().expect("Failed to receive quote");
         assert_eq!(quote.symbol, "SPY");

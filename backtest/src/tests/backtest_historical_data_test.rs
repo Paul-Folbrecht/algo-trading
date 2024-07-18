@@ -10,6 +10,7 @@ fn test_windowing() {
     let backtest_range = 20;
     let hist_data_range = 4;
     let service = Arc::new(new(
+        end,
         backtest_range,
         hist_data_range,
         historical_data_service,

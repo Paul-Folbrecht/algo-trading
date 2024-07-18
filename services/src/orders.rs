@@ -217,8 +217,7 @@ pub mod implementation {
         persistence.drop_positions()?;
         positions
             .values()
-            .map(|position| persistence.write(Box::new(position.clone())))
-            .collect()
+            .try_for_each(|position| persistence.write(Box::new(position.clone())))
     }
 }
 
