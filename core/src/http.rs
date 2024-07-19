@@ -2,14 +2,14 @@ use std::{fmt::Display, io::Read};
 
 use backoff::{retry, Error, ExponentialBackoff};
 use reqwest::{
-    blocking::Response,
+    blocking::{Client, Response},
     header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_LENGTH},
 };
 use serde::de::DeserializeOwned;
 
 pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
     let op = || {
-        reqwest::blocking::Client::new()
+        Client::new()
             .get(url)
             .headers(headers(token))
             .send()
@@ -21,7 +21,7 @@ pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
 
 pub fn post<T: DeserializeOwned>(url: &str, token: &str, body: String) -> Result<T, String> {
     let op = || {
-        let response = reqwest::blocking::Client::new()
+        let response = Client::new()
             .post(url)
             .headers(headers(token))
             .body(body.clone())
@@ -31,7 +31,7 @@ pub fn post<T: DeserializeOwned>(url: &str, token: &str, body: String) -> Result
             .text();
         println!("\n\nresponse:\n{:?}", response);
 
-        reqwest::blocking::Client::new()
+        Client::new()
             .post(url)
             .headers(headers(token))
             .body(body.clone())
@@ -78,9 +78,8 @@ where
             if buf.contains("error") {
                 Err(format!("Received Error Response: {}", buf))
             } else {
-                response
-                    .json::<T>()
-                    .map_err::<String, _>(|e| format!("Could not parse response body: {}", e))
+                serde_json::from_str(&buf)
+                    .map_err(|e| format!("Could not parse response body: {:?}", e))
             }
         })
 }

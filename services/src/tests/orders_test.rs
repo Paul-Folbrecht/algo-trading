@@ -26,7 +26,7 @@ fn test_create_order() {
     match service.create_order(order.clone(), "mean-reversion".to_string()) {
         Ok(_) => println!("Order created successfully: {:?}", order),
         Err(e) => {
-            eprintln!("\n\n\nError: {}", e);
+            eprintln!("\n\n\nError: {:?}", e);
             assert!(false);
         }
     }

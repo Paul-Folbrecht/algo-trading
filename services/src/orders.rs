@@ -43,12 +43,12 @@ pub mod implementation {
         pub positions: Arc<Mutex<HashMap<String, Position>>>,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Debug)]
     struct OrderResponse {
         order: OrderData,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Debug)]
     struct OrderData {
         id: i64,
         status: String,
@@ -69,6 +69,7 @@ pub mod implementation {
             match response {
                 Ok(response) => match response.order.status.as_str() {
                     "ok" => {
+                        println!("Response: {:?}", response);
                         let new_order = order.with_id(response.order.id);
                         match self.persistence.write(Box::new(new_order.clone())) {
                             Ok(_) => {}
