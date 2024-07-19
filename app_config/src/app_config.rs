@@ -10,6 +10,17 @@ pub struct AppConfig {
     pub sandbox: bool,
     pub mongo_url: String,
     pub strategies: Vec<Strategy>,
+    pub hist_data_range: i64,
+    pub backtest_range: i64,
+}
+
+impl AppConfig {
+    pub fn all_symbols(&self) -> Vec<String> {
+        self.strategies
+            .iter()
+            .flat_map(|s| s.symbols.clone())
+            .collect()
+    }
 }
 
 impl From<ConfigHolder> for AppConfig {
@@ -21,11 +32,13 @@ impl From<ConfigHolder> for AppConfig {
             sandbox: holder.sandbox,
             mongo_url: holder.mongo_url,
             strategies: holder.strategies.into_iter().map(|s| s.into()).collect(),
+            hist_data_range: holder.hist_data_range,
+            backtest_range: holder.backtest_range,
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Strategy {
     pub name: String,
     pub symbols: Vec<String>,
@@ -57,6 +70,8 @@ struct ConfigHolder {
     pub sandbox: bool,
     pub mongo_url: String,
     pub strategies: Vec<StrategyHolder>,
+    pub hist_data_range: i64,
+    pub backtest_range: i64,
 }
 
 #[derive(Deserialize)]
@@ -71,9 +86,9 @@ impl AppConfig {
         let run_mode = env::var("RUN_MODE").unwrap_or_else(|_| "development".into());
 
         let holder: ConfigHolder = Config::builder()
-            .add_source(File::with_name("config/default"))
-            .add_source(File::with_name(&format!("/config/{}", run_mode)).required(false))
-            .add_source(File::with_name("config/local").required(false))
+            .add_source(File::with_name("app_config/default"))
+            .add_source(File::with_name(&format!("/app_config/{}", run_mode)).required(false))
+            .add_source(File::with_name("app_config/local").required(false))
             .build()?
             .try_deserialize::<ConfigHolder>()?;
         Ok(holder.into())

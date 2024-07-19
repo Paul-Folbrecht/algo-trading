@@ -1,39 +1,43 @@
 use super::*;
 use chrono::{Local, NaiveDate};
-use domain::domain::{Day, History};
+use domain::domain::Day;
 use implementation::*;
 
 struct MockHistoricalDataService {}
 impl HistoricalDataService for MockHistoricalDataService {
-    fn fetch(&self, _: &str, _: NaiveDate, _: NaiveDate) -> Result<History, reqwest::Error> {
-        Ok(History {
-            day: vec![
-                Day {
-                    date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
-                    open: 1.0,
-                    high: 1.0,
-                    low: 1.0,
-                    close: 10.0,
-                    volume: 1,
-                },
-                Day {
-                    date: NaiveDate::from_ymd_opt(2024, 4, 2).unwrap(),
-                    open: 2.0,
-                    high: 2.0,
-                    low: 2.0,
-                    close: 10.0,
-                    volume: 2,
-                },
-                Day {
-                    date: NaiveDate::from_ymd_opt(2024, 4, 3).unwrap(),
-                    open: 3.0,
-                    high: 3.0,
-                    low: 3.0,
-                    close: 20.0,
-                    volume: 3,
-                },
-            ],
-        })
+    fn fetch(&self, _: NaiveDate) -> Arc<HashMap<String, Vec<Day>>> {
+        let days = vec![
+            Day {
+                symbol: Some("SPY".to_string()),
+                date: NaiveDate::from_ymd_opt(2024, 4, 1).unwrap(),
+                open: 1.0,
+                high: 1.0,
+                low: 1.0,
+                close: 10.0,
+                volume: 1,
+            },
+            Day {
+                symbol: Some("SPY".to_string()),
+                date: NaiveDate::from_ymd_opt(2024, 4, 2).unwrap(),
+                open: 2.0,
+                high: 2.0,
+                low: 2.0,
+                close: 10.0,
+                volume: 2,
+            },
+            Day {
+                symbol: Some("SPY".to_string()),
+                date: NaiveDate::from_ymd_opt(2024, 4, 3).unwrap(),
+                open: 3.0,
+                high: 3.0,
+                low: 3.0,
+                close: 20.0,
+                volume: 3,
+            },
+        ];
+        let mut map = HashMap::new();
+        map.insert("SPY".to_string(), days);
+        Arc::new(map)
     }
 }
 
@@ -41,7 +45,8 @@ impl HistoricalDataService for MockHistoricalDataService {
 fn test_load_history() {
     let symbols = vec!["SPY".to_string()];
     let historical_data_service = Arc::new(MockHistoricalDataService {});
-    let data = load_history(&symbols, historical_data_service);
+    let date = Local::now().naive_local().date();
+    let data = load_history(date, &symbols, historical_data_service);
     let spy = data.get(&"SPY".to_string()).unwrap();
     assert_eq!(spy.mean, 13.333333333333334);
     assert_eq!(spy.std_dev, 4.714045207910316);
@@ -49,7 +54,7 @@ fn test_load_history() {
 
 struct MockOrderService {}
 impl OrderService for MockOrderService {
-    fn create_order(&self, order: Order) -> Result<Order, String> {
+    fn create_order(&self, order: Order, _: String) -> Result<Order, String> {
         Ok(order.with_id(1000))
     }
 
@@ -67,13 +72,14 @@ impl OrderService for MockOrderService {
         }
     }
 
-    fn update_position(&self, position: &Position) {
+    fn update_position(&self, _: &Position) {
         unimplemented!()
     }
 }
 
 #[test]
 fn test_handle_quote() {
+    let date = Local::now().naive_local().date();
     let orders = Arc::new(MockOrderService {});
 
     let quote = Quote {
@@ -84,7 +90,7 @@ fn test_handle_quote() {
         askdate: Local::now(),
     };
 
-    match maybe_create_order(Signal::Buy, orders.get_position("SPY"), &quote, 10000) {
+    match maybe_create_order(date, Signal::Buy, orders.get_position("SPY"), &quote, 10000) {
         Some(order) => {
             assert_eq!(order.symbol, "SPY");
             // Capital of $10K - 100 shares * 80 = $2000 remaining capital = 25 shares at $80
@@ -94,7 +100,13 @@ fn test_handle_quote() {
         None => panic!("Expected an order"),
     }
 
-    match maybe_create_order(Signal::Sell, orders.get_position("SPY"), &quote, 10000) {
+    match maybe_create_order(
+        date,
+        Signal::Sell,
+        orders.get_position("SPY"),
+        &quote,
+        10000,
+    ) {
         Some(order) => {
             assert_eq!(order.symbol, "SPY");
             // We always unwind completely and have 100 shares, so any Sell signal should sell all
@@ -104,7 +116,13 @@ fn test_handle_quote() {
         None => panic!("Expected an order"),
     }
 
-    match maybe_create_order(Signal::None, orders.get_position("SPY"), &quote, 10000) {
+    match maybe_create_order(
+        date,
+        Signal::None,
+        orders.get_position("SPY"),
+        &quote,
+        10000,
+    ) {
         Some(_) => panic!("Expected no order"),
         None => {}
     }

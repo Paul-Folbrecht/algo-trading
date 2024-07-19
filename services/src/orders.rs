@@ -6,7 +6,7 @@ use domain::domain::*;
 use std::{collections::HashMap, sync::Mutex};
 
 pub trait OrderService {
-    fn create_order(&self, order: Order) -> Result<Order, String>;
+    fn create_order(&self, order: Order, strategy: String) -> Result<Order, String>;
     fn get_position(&self, symbol: &str) -> Option<Position>;
     fn update_position(&self, position: &Position);
 }
@@ -18,7 +18,7 @@ pub fn new(
     persistence: Arc<impl PersistenceService + Send + Sync>,
 ) -> Result<Arc<impl OrderService>, String> {
     let positions = implementation::read_positions(&base_url, &access_token, &account_id)?;
-    println!("Read positions from broker: {:?}", positions);
+    println!("Read positions from broker:\n{:?}", positions);
     implementation::update_local_positions(persistence.clone(), &positions)?;
 
     Ok(Arc::new(implementation::Orders {
@@ -30,7 +30,7 @@ pub fn new(
     }))
 }
 
-mod implementation {
+pub mod implementation {
     use super::*;
     use chrono::Local;
     use serde::Deserialize;
@@ -43,19 +43,19 @@ mod implementation {
         pub positions: Arc<Mutex<HashMap<String, Position>>>,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Debug)]
     struct OrderResponse {
         order: OrderData,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Debug)]
     struct OrderData {
         id: i64,
         status: String,
     }
 
     impl<P: PersistenceService + Send + Sync> OrderService for Orders<P> {
-        fn create_order(&self, order: Order) -> Result<Order, String> {
+        fn create_order(&self, order: Order, strategy: String) -> Result<Order, String> {
             let url = format!(
                 "https://{}/v1/accounts/{}/orders",
                 self.base_url, self.account_id
@@ -69,6 +69,7 @@ mod implementation {
             match response {
                 Ok(response) => match response.order.status.as_str() {
                     "ok" => {
+                        println!("Response: {:?}", response);
                         let new_order = order.with_id(response.order.id);
                         match self.persistence.write(Box::new(new_order.clone())) {
                             Ok(_) => {}
@@ -79,6 +80,14 @@ mod implementation {
                         match self.persistence.write(Box::new(position.clone())) {
                             Ok(_) => self.update_position(&position),
                             Err(e) => eprintln!("Error writing position: {}", e),
+                        }
+
+                        if order.side == Side::Sell {
+                            let pnl = calc_pnl(position, &order, strategy);
+                            match self.persistence.write(Box::new(pnl.clone())) {
+                                Ok(_) => println!("Generated P&L: {:?}", pnl),
+                                Err(e) => eprintln!("Error writing position: {}", e),
+                            }
                         }
 
                         Ok(new_order)
@@ -102,7 +111,14 @@ mod implementation {
         }
     }
 
-    fn position_from(order: &Order, existing: Option<Position>) -> Position {
+    pub fn position_from(order: &Order, existing: Option<Position>) -> Position {
+        match order.side {
+            Side::Buy => position_from_buy(order, existing),
+            Side::Sell => position_from_sell(order, existing),
+        }
+    }
+
+    pub fn position_from_buy(order: &Order, existing: Option<Position>) -> Position {
         match existing {
             Some(position) => Position {
                 quantity: position.quantity + order.quantity,
@@ -115,10 +131,44 @@ mod implementation {
                     broker_id: None,
                     symbol: order.symbol.clone(),
                     quantity: order.quantity,
-                    cost_basis: 0.0,
+                    cost_basis: order.px.unwrap_or(0.0) * order.quantity as f64, // Estimate
                     date: Local::now(),
                 }
             }
+        }
+    }
+
+    pub fn position_from_sell(order: &Order, existing: Option<Position>) -> Position {
+        match existing {
+            Some(position) => {
+                assert!(
+                    order.quantity <= position.quantity,
+                    "Attempted invalid unwind"
+                );
+                Position {
+                    quantity: 0,
+                    ..position
+                }
+            }
+            None => panic!("Attempted unwind with no position: {:?}", order),
+        }
+    }
+
+    pub fn calc_pnl(position: Position, order: &Order, strategy: String) -> RealizedPnL {
+        let price = order.px.unwrap_or(0.0);
+        let proceeds = price * order.quantity as f64;
+        let pnl = proceeds - position.cost_basis;
+
+        println!(
+            "Calced Realized P&L; proceeds: {}; cost basis: {}; pnl: {}; price: {}; quantity: {}",
+            proceeds, position.cost_basis, pnl, price, order.quantity
+        );
+        RealizedPnL {
+            id: order.id(),
+            symbol: order.symbol.clone(),
+            date: order.date,
+            pnl,
+            strategy: strategy.to_string(),
         }
     }
 
@@ -168,8 +218,7 @@ mod implementation {
         persistence.drop_positions()?;
         positions
             .values()
-            .map(|position| persistence.write(Box::new(position.clone())))
-            .collect()
+            .try_for_each(|position| persistence.write(Box::new(position.clone())))
     }
 }
 

@@ -1,19 +1,20 @@
 [package]
-name = "services"
+name = "backtest"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+app-config = { path = "../app_config" }
 core = { path = "../core" }
 domain = { path = "../domain" }
-backoff = "0.4.0"
+services = { path = "../services" }
+
 chrono = "0.4.38"
 crossbeam-channel = "0.5.12"
 crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }
-mongodb = { version = "2.8.2", default-features = false, features = ["sync"] }
 reqwest = { version = "*", features = ["json", "blocking"] }
 serde = { version = "1.0.201", features = ["derive"] }
 serde_json = "1.0.117"
-tungstenite = { version = "0.21.0", features = ["native-tls"] }
+itertools = "0.13.0"

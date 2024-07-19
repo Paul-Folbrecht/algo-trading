@@ -3,7 +3,7 @@ use core::serde::{millis_date_time_format, rfc_3339_date_time_format, string_dat
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
-    fmt::{Display, Formatter},
+    fmt::{self, Display, Formatter},
 };
 
 use crate::serde::side_format;
@@ -19,13 +19,9 @@ pub struct Quote {
     pub askdate: DateTime<Local>,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct History {
-    pub day: Vec<Day>,
-}
-
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub struct Day {
+    pub symbol: Option<String>,
     #[serde(with = "string_date_format")]
     pub date: NaiveDate,
     pub open: f64,
@@ -73,7 +69,7 @@ pub trait Persistable {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Order {
-    pub broker_id: Option<i64>,
+    pub id: Option<i64>,
     #[serde(with = "string_date_format")]
     pub date: NaiveDate,
     pub symbol: String,
@@ -81,6 +77,7 @@ pub struct Order {
     pub side: Side,
     // Integer quantity as we'll only trade equities
     pub quantity: i64,
+    pub px: Option<f64>,
 }
 
 impl Persistable for Order {
@@ -89,14 +86,14 @@ impl Persistable for Order {
     }
 
     fn id(&self) -> i64 {
-        self.broker_id.unwrap_or(0)
+        self.id.unwrap_or(0)
     }
 }
 
 impl Order {
     pub fn with_id(&self, id: i64) -> Self {
         Order {
-            broker_id: Some(id),
+            id: Some(id),
             ..self.clone()
         }
     }
@@ -161,9 +158,24 @@ impl Persistable for Position {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum Strategy {
-    MeanReversion { symbols: Vec<String> },
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RealizedPnL {
+    pub id: i64,
+    pub symbol: String,
+    #[serde(with = "string_date_format")]
+    pub date: NaiveDate,
+    pub pnl: f64,
+    pub strategy: String,
+}
+
+impl Persistable for RealizedPnL {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn id(&self) -> i64 {
+        self.id
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -173,8 +185,9 @@ pub enum Signal {
     None,
 }
 
-pub trait StrategyHandler {
-    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String>;
+#[derive(Debug, Clone)]
+pub enum Strategy {
+    MeanReversion { symbols: Vec<String> },
 }
 
 impl Strategy {
@@ -186,19 +199,29 @@ impl Strategy {
     }
 }
 
+impl Display for Strategy {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+pub trait StrategyHandler {
+    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String>;
+}
+
 impl StrategyHandler for Strategy {
-    fn handle(&self, _quote: &Quote, data: &SymbolData) -> Result<Signal, String> {
-        let quote = if _quote.symbol == "AAPL" {
-            Quote {
-                symbol: "AAPL".to_string(),
-                bid: 100.0,
-                ask: 100.0,
-                biddate: Local::now(),
-                askdate: Local::now(),
-            }
-        } else {
-            _quote.clone()
-        };
+    fn handle(&self, quote: &Quote, data: &SymbolData) -> Result<Signal, String> {
+        // let quote = if _quote.symbol == "AAPL" {
+        //     Quote {
+        //         symbol: "AAPL".to_string(),
+        //         bid: 100.0,
+        //         ask: 100.0,
+        //         biddate: Local::now(),
+        //         askdate: Local::now(),
+        //     }
+        // } else {
+        //     _quote.clone()
+        // };
         match self {
             Strategy::MeanReversion { symbols } => {
                 if symbols.contains(&quote.symbol) {
@@ -218,17 +241,17 @@ impl StrategyHandler for Strategy {
 
                     if buy {
                         println!("***Buy signal for {}***", quote.symbol);
-                        return Ok(Signal::Buy);
+                        Ok(Signal::Buy)
                     } else if sell {
                         println!("***Sell signal for {}***", quote.symbol);
-                        return Ok(Signal::Sell);
+                        Ok(Signal::Sell)
                     } else {
                         println!("No signal for {}", quote.symbol);
-                        return Ok(Signal::None);
+                        Ok(Signal::None)
                     }
                 } else {
                     println!("Symbol {} not in strategy", quote.symbol);
-                    return Ok(Signal::None);
+                    Ok(Signal::None)
                 }
             }
         }

@@ -3,6 +3,8 @@ access_token = ""
 sandbox_token = ""
 account_id = ""
 mongo_url = "mongodb://localhost:27017/"
+hist_data_range = 20
+backtest_range = 300
 
 [[strategies]]
 name = "mean-reversion"

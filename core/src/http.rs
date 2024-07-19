@@ -1,22 +1,15 @@
+use std::{fmt::Display, io::Read};
+
 use backoff::{retry, Error, ExponentialBackoff};
 use reqwest::{
-    blocking::Response,
+    blocking::{Client, Response},
     header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_LENGTH},
 };
 use serde::de::DeserializeOwned;
 
 pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
     let op = || {
-        let response = reqwest::blocking::Client::new()
-            .get(url)
-            .headers(headers(token))
-            .send()
-            .map_err(backoff::Error::transient)
-            .unwrap()
-            .text();
-        println!("\n\response:\n{:?}", response);
-
-        reqwest::blocking::Client::new()
+        Client::new()
             .get(url)
             .headers(headers(token))
             .send()
@@ -28,7 +21,17 @@ pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
 
 pub fn post<T: DeserializeOwned>(url: &str, token: &str, body: String) -> Result<T, String> {
     let op = || {
-        reqwest::blocking::Client::new()
+        let response = Client::new()
+            .post(url)
+            .headers(headers(token))
+            .body(body.clone())
+            .send()
+            .map_err(backoff::Error::transient)
+            .unwrap()
+            .text();
+        println!("\n\nresponse:\n{:?}", response);
+
+        Client::new()
             .post(url)
             .headers(headers(token))
             .body(body.clone())
@@ -63,12 +66,20 @@ fn call<T, F, E>(op: F) -> Result<T, String>
 where
     T: DeserializeOwned,
     F: FnMut() -> Result<Response, Error<E>>,
-    E: std::fmt::Display,
+    E: Display,
 {
     retry(backoff(), op)
         .map_err::<String, _>(|e| e.to_string())
-        .and_then(|r| {
-            r.json::<T>()
-                .map_err::<String, _>(|e| format!("Could not parse response body: {}", e))
+        .and_then(|mut response| {
+            let mut buf = String::new();
+            response
+                .read_to_string(&mut buf)
+                .expect("HTTP response not valid UTF-8");
+            if buf.contains("error") {
+                Err(format!("Received Error Response: {}", buf))
+            } else {
+                serde_json::from_str(&buf)
+                    .map_err(|e| format!("Could not parse response body: {:?}", e))
+            }
         })
 }

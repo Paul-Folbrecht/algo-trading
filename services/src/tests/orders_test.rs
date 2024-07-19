@@ -15,17 +15,18 @@ fn test_create_order() {
     )
     .expect("Failed to create OrdersService");
     let order = Order {
-        broker_id: None,
+        id: None,
         date: Local::now().naive_local().date(),
         symbol: "SPY".to_string(),
         side: Side::Buy,
         quantity: 1,
+        px: Some(100.0),
     };
 
-    match service.create_order(order.clone()) {
+    match service.create_order(order.clone(), "mean-reversion".to_string()) {
         Ok(_) => println!("Order created successfully: {:?}", order),
         Err(e) => {
-            eprintln!("\n\n\nError: {}", e);
+            eprintln!("\n\n\nError: {:?}", e);
             assert!(false);
         }
     }

@@ -46,6 +46,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "app-config"
+version = "0.1.0"
+dependencies = [
+ "config",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "arrayvec"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
+
+[[package]]
 name = "async-attributes"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -285,6 +300,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "backtest"
+version = "0.1.0"
+dependencies = [
+ "app-config",
+ "chrono",
+ "core",
+ "crossbeam",
+ "crossbeam-channel",
+ "domain",
+ "itertools",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "services",
+]
+
+[[package]]
 name = "backtrace"
 version = "0.3.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -501,6 +533,7 @@ version = "0.1.0"
 dependencies = [
  "backoff",
  "chrono",
+ "num-format",
  "reqwest",
  "serde",
  "serde_json",
@@ -706,6 +739,12 @@ dependencies = [
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "either"
+version = "1.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
 name = "encoding_rs"
@@ -1240,6 +1279,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f518f335dce6725a761382244631d86cf0ccb2863413590b31338feb467f9c3"
 
 [[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1474,6 +1522,16 @@ name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
+
+[[package]]
+name = "num-format"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a652d9771a63711fd3c3deb670acfbe5c30a4072e664d7a3bf5a9e1056ac72c3"
+dependencies = [
+ "arrayvec",
+ "itoa",
+]
 
 [[package]]
 name = "num-traits"
@@ -2180,9 +2238,8 @@ dependencies = [
 name = "server"
 version = "0.1.0"
 dependencies = [
- "config",
- "serde",
- "serde_json",
+ "app-config",
+ "chrono",
  "services",
 ]
 
@@ -2200,7 +2257,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "tokio",
  "tungstenite",
 ]
 

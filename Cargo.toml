@@ -1,5 +1,5 @@
 [workspace]
-members = ["core", "domain", "services", "server"]
+members = ["core", "domain", "services", "server", "backtest"]
 
 [workspace.package]
 version = "0.1.0"
