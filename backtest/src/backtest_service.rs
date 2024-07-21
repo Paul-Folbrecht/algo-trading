@@ -50,9 +50,8 @@ mod implementation {
         > BacktestService for Backtest<H, M, O>
     {
         // - For each date in range:
-        //   - Construct BacktestMarketDataService from MarketDataManager data; use single BacktestHistoricalDataService
+        //   - Construct BacktestMarketDataService from MarketDataManager data
         //   - run() strategies - will subscribe to MarketDataService and be fed quotes
-        // - Report Realized PnL, open positions from OrderService
         fn run(&self) -> Result<(), String> {
             let start = self.end - chrono::Duration::days(self.backtest_range);
             println!("Running backtest from {} to {}", start, self.end);
@@ -100,7 +99,7 @@ mod implementation {
                 }
             }
 
-            Ok(()) // @todo return Pnl & positions
+            Ok(())
         }
     }
 }

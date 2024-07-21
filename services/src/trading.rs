@@ -101,7 +101,6 @@ mod implementation {
         }
 
         fn shutdown(&mut self) -> Result<(), String> {
-            //self.market_data.unsubscribe().unwrap();
             self.thread_handle
                 .take()
                 .map(|h| h.join().unwrap())
@@ -120,7 +119,7 @@ mod implementation {
     ) {
         if let Some(symbol_data) = symbol_data.get(&quote.symbol) {
             let maybe_position = orders.get_position(&quote.symbol);
-            match strategy.handle(&quote, symbol_data) {
+            match strategy.handle(quote, symbol_data) {
                 Ok(signal) => {
                     if let Some(order) =
                         maybe_create_order(date, signal, maybe_position, quote, capital)
