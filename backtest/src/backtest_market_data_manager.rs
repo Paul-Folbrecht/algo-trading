@@ -36,7 +36,7 @@ pub fn new(
             .and_local_timezone(Local)
             .earliest()
             .expect("Failed to convert date to datetime");
-        quotes.entry(day.date).or_insert_with(Vec::new).push(Quote {
+        quotes.entry(day.date).or_default().push(Quote {
             symbol: day.symbol.expect("Missing symbol").clone(),
             bid: day.close,
             ask: day.close,
@@ -97,7 +97,7 @@ mod implementation {
             Ok(receiver)
         }
 
-        fn unsubscribe(&self, subscriber: Receiver<Quote>) -> Result<(), String> {
+        fn unsubscribe(&self, subscriber: &Receiver<Quote>) -> Result<(), String> {
             Ok(())
         }
     }

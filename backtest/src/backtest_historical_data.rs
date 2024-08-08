@@ -1,9 +1,8 @@
-use std::sync::Arc;
-
 use chrono::NaiveDate;
 use domain::domain::Day;
 use services::historical_data::HistoricalDataService;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 pub trait BacktestHistoricalDataManager: HistoricalDataService {
     fn all(&self) -> Arc<HashMap<String, Vec<Day>>>;
@@ -80,27 +79,22 @@ mod implementation {
 //             .history
 //             .get(symbol)
 //             .expect(format!("No data for {}", symbol).as_ref());
-//         Ok(symbol_history
-//             .iter()
-//             .filter(|day| day.date >= start && day.date <= end)
-//             .collect())
-//     let start_index = date_to_index(start, self.start);
-//     let end_index = date_to_index(end, self.start);
+//         let start_index = date_to_index(start, self.start);
+//         let end_index = date_to_index(end, self.start);
 
-//     println!(
-//         "BacktestHistoricalData.fetch for {}: from {} to {}; indices {} - {}; symbol_history.len {}",
-//         symbol,
-//         start,
-//         end,
-//         start_index,
-//         end_index,
-//         symbol_history.len()
-//     );
+//         println!(
+//             "BacktestHistoricalData.fetch for {}: from {} to {}; indices {} - {}; symbol_history.len {}",
+//             symbol,
+//             start,
+//             end,
+//             start_index,
+//             end_index,
+//             symbol_history.len()
+//         );
 
-//     assert!(start_index >= 0);
-//     assert!((end_index as usize) < symbol_history.len());
-//     Ok(symbol_history[start_index as usize..end_index as usize].to_vec())
-//         }
+//         assert!(start_index >= 0);
+//         assert!((end_index as usize) < symbol_history.len());
+//         Ok(symbol_history[start_index as usize..end_index as usize].to_vec())
 //     }
 
 //     fn date_to_index(date: NaiveDate, start: NaiveDate) -> i64 {

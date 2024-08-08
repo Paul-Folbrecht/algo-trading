@@ -189,7 +189,7 @@ pub mod implementation {
     ) -> Result<HashMap<String, Position>, String> {
         let url = format!("https://{}/v1/accounts/{}/positions", base_url, account_id);
         println!("url: {}", url);
-        let response = get::<PositionResponse>(&url, &access_token);
+        let response = get::<PositionResponse>(&url, access_token);
 
         match response {
             Ok(response) => {
