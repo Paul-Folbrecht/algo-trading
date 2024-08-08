@@ -3,12 +3,10 @@ use domain::domain::Quote;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
 use std::collections::HashSet;
-use std::net::TcpStream;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use tungstenite::{connect, Message};
-use tungstenite::{stream::MaybeTlsStream, WebSocket};
 
 pub trait MarketDataService {
     fn init(
@@ -17,13 +15,12 @@ pub trait MarketDataService {
         symbols: Vec<String>,
     ) -> Result<JoinHandle<()>, String>;
     fn subscribe(&self) -> Result<Receiver<Quote>, String>;
-    fn unsubscribe(&self, subscriber: Receiver<Quote>) -> Result<(), String>;
+    fn unsubscribe(&self, subscriber: &Receiver<Quote>) -> Result<(), String>;
 }
 
 pub fn new(access_token: String) -> Arc<impl MarketDataService> {
     Arc::new(implementation::MarketData {
         access_token,
-        socket: None,
         symbols: HashSet::new(),
         subscribers: Arc::new(Mutex::new(Vec::new())),
     })
@@ -44,7 +41,7 @@ mod implementation {
 
     pub struct MarketData {
         pub access_token: String,
-        pub socket: Option<WebSocket<MaybeTlsStream<TcpStream>>>,
+        //pub socket: Option<Arc<&WebSocket<MaybeTlsStream<TcpStream>>>>,
         pub symbols: HashSet<String>,
         pub subscribers: Arc<Mutex<Vec<(Sender<Quote>, Receiver<Quote>)>>>,
     }
@@ -73,6 +70,8 @@ mod implementation {
                     let subscribers = self.subscribers.clone();
                     let handle = std::thread::spawn(move || {
                         while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+                            // thread '<unnamed>' panicked at services/src/market_data.rs:75:34:
+                            // Error reading message: Protocol(ResetWithoutClosingHandshake)
                             let msg = socket
                                 .read()
                                 .expect("Error reading message")
@@ -88,6 +87,7 @@ mod implementation {
                                 }
                             }
                         }
+                        println!("MarketDataService shutting down");
                     });
 
                     Ok(handle)
@@ -107,13 +107,13 @@ mod implementation {
                 .map(|_| subscriber)
         }
 
-        fn unsubscribe(&self, subscriber: Receiver<Quote>) -> Result<(), String> {
+        fn unsubscribe(&self, subscriber: &Receiver<Quote>) -> Result<(), String> {
             match self.subscribers.lock() {
                 Ok(mut guard) => {
                     let subscribers: &mut Vec<(Sender<Quote>, Receiver<Quote>)> = &mut guard;
                     if let Some(index) = subscribers
                         .iter()
-                        .position(|(_, r)| std::ptr::eq(r, &subscriber))
+                        .position(|(_, r)| std::ptr::eq(r, subscriber))
                     {
                         subscribers.remove(index);
                         Ok(())

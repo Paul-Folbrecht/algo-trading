@@ -97,7 +97,7 @@ mod implementation {
             Ok(receiver)
         }
 
-        fn unsubscribe(&self, subscriber: Receiver<Quote>) -> Result<(), String> {
+        fn unsubscribe(&self, subscriber: &Receiver<Quote>) -> Result<(), String> {
             Ok(())
         }
     }

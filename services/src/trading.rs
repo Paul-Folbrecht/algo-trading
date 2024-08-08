@@ -30,10 +30,13 @@ pub fn new(
         historical_data,
         orders,
         thread_handle: None,
+        rx: None,
     }
 }
 
 mod implementation {
+    use crossbeam_channel::Receiver;
+
     use super::*;
     use std::{collections::HashMap, thread::JoinHandle};
 
@@ -50,6 +53,7 @@ mod implementation {
         pub historical_data: Arc<H>,
         pub orders: Arc<O>,
         pub thread_handle: Option<JoinHandle<()>>,
+        pub rx: Option<Receiver<Quote>>,
     }
 
     impl<
@@ -101,6 +105,10 @@ mod implementation {
         }
 
         fn shutdown(&mut self) -> Result<(), String> {
+            self.rx
+                .as_ref()
+                .map(|rx| (self.market_data.unsubscribe(rx).unwrap()));
+
             self.thread_handle
                 .take()
                 .map(|h| h.join().unwrap())
