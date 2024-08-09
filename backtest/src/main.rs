@@ -62,6 +62,6 @@ fn main() {
                 pnl.iter().format("\n"),
                 pnl.iter().map(|pnl| pnl.pnl).sum::<f64>());
         }
-        Err(e) => eprintln!("Backtest failed: {}", e),
+        Err(e) => println!("Backtest failed: {}", e),
     })
 }

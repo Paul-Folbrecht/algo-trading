@@ -41,7 +41,6 @@ mod implementation {
 
     pub struct MarketData {
         pub access_token: String,
-        //pub socket: Option<Arc<&WebSocket<MaybeTlsStream<TcpStream>>>>,
         pub symbols: HashSet<String>,
         pub subscribers: Arc<Mutex<Vec<(Sender<Quote>, Receiver<Quote>)>>>,
     }
@@ -70,20 +69,31 @@ mod implementation {
                     let subscribers = self.subscribers.clone();
                     let handle = std::thread::spawn(move || {
                         while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
-                            // thread '<unnamed>' panicked at services/src/market_data.rs:75:34:
-                            // Error reading message: Protocol(ResetWithoutClosingHandshake)
-                            let msg = socket
-                                .read()
-                                .expect("Error reading message")
-                                .into_text()
-                                .expect("Error converting message to text");
-                            let quote = serde_json::from_str::<Quote>(msg.as_str())
-                                .expect("Error parsing JSON");
-                            println!("MarketDataService received quote: {:?}", quote);
-                            for subscriber in subscribers.lock().unwrap().iter() {
-                                match subscriber.0.send(quote.clone()) {
-                                    Ok(_) => (),
-                                    Err(e) => eprintln!("Error sending quote to subscriber: {}", e),
+                            match socket.read() {
+                                Ok(msg) => {
+                                    let msg =
+                                        msg.into_text().expect("Error converting message to text");
+                                    let quote = serde_json::from_str::<Quote>(msg.as_str())
+                                        .expect("Error parsing JSON");
+                                    println!("MarketDataService received quote: {:?}", quote);
+
+                                    for subscriber in subscribers.lock().unwrap().iter() {
+                                        match subscriber.0.send(quote.clone()) {
+                                            Ok(_) => (),
+                                            Err(e) => println!(
+                                                "MarketDataService: Error sending quote to subscriber: {}",
+                                                e
+                                            ),
+                                        }
+                                    }
+                                }
+
+                                Err(e) => {
+                                    println!(
+                                        "MarketDataService: Error reading message - likely EOD connection close - shutting down: {}",
+                                        e
+                                    );
+                                    shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
                                 }
                             }
                         }

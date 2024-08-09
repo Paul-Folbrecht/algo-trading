@@ -73,20 +73,20 @@ pub mod implementation {
                         let new_order = order.with_id(response.order.id);
                         match self.persistence.write(Box::new(new_order.clone())) {
                             Ok(_) => {}
-                            Err(e) => eprintln!("Error writing order: {}", e),
+                            Err(e) => println!("Error writing order: {}", e),
                         }
 
                         let position = position_from(&new_order, self.get_position(&order.symbol));
                         match self.persistence.write(Box::new(position.clone())) {
                             Ok(_) => self.update_position(&position),
-                            Err(e) => eprintln!("Error writing position: {}", e),
+                            Err(e) => println!("Error writing position: {}", e),
                         }
 
                         if order.side == Side::Sell {
                             let pnl = calc_pnl(position, &order, strategy);
                             match self.persistence.write(Box::new(pnl.clone())) {
                                 Ok(_) => println!("Generated P&L: {:?}", pnl),
-                                Err(e) => eprintln!("Error writing position: {}", e),
+                                Err(e) => println!("Error writing position: {}", e),
                             }
                         }
 
@@ -204,7 +204,7 @@ pub mod implementation {
                 Ok(positions)
             }
             Err(e) => {
-                eprintln!("Error reading positions - probably there are < 2: {}", e);
+                println!("Error reading positions - probably there are < 2: {}", e);
                 Ok(HashMap::new())
             }
         }

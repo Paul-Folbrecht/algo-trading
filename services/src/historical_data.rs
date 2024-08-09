@@ -91,12 +91,12 @@ mod implementation {
                     Ok(with_symbols)
                 }
                 Err(e) => {
-                    eprintln!("Failed to deserialize: {}", e);
+                    println!("Failed to deserialize: {}", e);
                     Err(e)
                 }
             },
             Err(e) => {
-                eprintln!("Request failed: {}", e);
+                println!("Request failed: {}", e);
                 Err(e)
             }
         }

@@ -58,6 +58,7 @@ mod implementation {
 
             for i in 0..=self.backtest_range {
                 let date = start + chrono::Duration::days(i);
+                let shutdown = Arc::new(AtomicBool::new(false));
 
                 println!("\nRunning for {}", date);
                 match self.market_data_manager.service_for_date(date) {
@@ -71,6 +72,7 @@ mod implementation {
                                 market_data.clone(),
                                 self.historical_data.clone(),
                                 self.orders.clone(),
+                                shutdown.clone(),
                             );
 
                             match trading_service.run() {
@@ -84,7 +86,7 @@ mod implementation {
                                         .expect("Unexpected error shutting down trading_service");
                                 }
                                 Err(e) => {
-                                    eprintln!(
+                                    println!(
                                         "Error starting TradingService {}: {}",
                                         strategy.name, e
                                     )
@@ -93,7 +95,7 @@ mod implementation {
                         });
                     }
                     Err(_) => {
-                        eprintln!("Skipping {} - no data (weekend or holiday)", date);
+                        println!("Skipping {} - no data (weekend or holiday)", date);
                         continue;
                     }
                 }

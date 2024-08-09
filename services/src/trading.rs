@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use crate::historical_data::HistoricalDataService;
@@ -20,6 +21,7 @@ pub fn new(
     market_data: Arc<impl MarketDataService + 'static + Send + Sync>,
     historical_data: Arc<impl HistoricalDataService + 'static + Send + Sync>,
     orders: Arc<impl OrderService + 'static + Send + Sync>,
+    shutdown: Arc<AtomicBool>,
 ) -> impl TradingService + 'static {
     implementation::Trading {
         today,
@@ -31,14 +33,18 @@ pub fn new(
         orders,
         thread_handle: None,
         rx: None,
+        shutdown,
     }
 }
 
 mod implementation {
-    use crossbeam_channel::Receiver;
-
     use super::*;
-    use std::{collections::HashMap, thread::JoinHandle};
+    use crossbeam_channel::Receiver;
+    use std::{
+        collections::HashMap,
+        thread::{self, JoinHandle},
+        time::Duration,
+    };
 
     pub struct Trading<
         M: MarketDataService + 'static + Send + Sync,
@@ -54,6 +60,7 @@ mod implementation {
         pub orders: Arc<O>,
         pub thread_handle: Option<JoinHandle<()>>,
         pub rx: Option<Receiver<Quote>>,
+        pub shutdown: Arc<AtomicBool>,
     }
 
     impl<
@@ -77,26 +84,31 @@ mod implementation {
                     let strategy = Strategy::new(&self.strategy_name, self.symbols.clone());
                     let capital = self.capital.clone();
                     let date = self.today;
+                    let shutdown = self.shutdown.clone();
 
-                    self.thread_handle = Some(std::thread::spawn(move || loop {
-                        match rx.recv() {
-                            Ok(quote) => {
-                                let symbol_capital = capital.get(&quote.symbol).unwrap_or(&0);
-                                println!("TradingService received quote:\n{:?}", quote);
-                                handle_quote(
-                                    date,
-                                    &symbol_data,
-                                    &quote,
-                                    *symbol_capital,
-                                    &strategy,
-                                    orders.clone(),
-                                );
-                            }
-                            Err(e) => {
-                                eprintln!("TradingService: Market Data channel shut down: {}", e);
-                                break;
+                    self.thread_handle = Some(std::thread::spawn(move || {
+                        while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+                            match rx.try_recv() {
+                                Ok(quote) => {
+                                    let symbol_capital = capital.get(&quote.symbol).unwrap_or(&0);
+                                    println!("TradingService received quote:\n{:?}", quote);
+                                    handle_quote(
+                                        date,
+                                        &symbol_data,
+                                        &quote,
+                                        *symbol_capital,
+                                        &strategy,
+                                        orders.clone(),
+                                    );
+                                }
+
+                                Err(_) => {
+                                    thread::sleep(Duration::from_millis(100));
+                                }
                             }
                         }
+
+                        println!("TradingService shutting down");
                     }))
                 }
                 Err(e) => return Err(format!("Failed to subscribe to MarketDataService: {}", e)),
@@ -134,14 +146,14 @@ mod implementation {
                     {
                         match orders.create_order(order.clone(), strategy.to_string()) {
                             Ok(o) => println!("Order created: {:?}", o),
-                            Err(e) => eprintln!("Error creating order: {}", e),
+                            Err(e) => println!("Error creating order: {}", e),
                         }
                     }
                 }
-                Err(e) => eprintln!("Error from strategy: {}", e),
+                Err(e) => println!("Error from strategy: {}", e),
             }
         } else {
-            eprintln!("No symbol data found for {}", quote.symbol);
+            println!("No symbol data found for {}", quote.symbol);
         }
     }
 

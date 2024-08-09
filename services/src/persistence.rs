@@ -52,11 +52,11 @@ mod implementation {
                         Ok(p) => match writer.write(p) {
                             Ok(_) => {}
                             Err(e) => {
-                                eprintln!("Error writing object: {:?}", e);
+                                println!("Error writing object: {:?}", e);
                             }
                         },
-                        Err(e) => {
-                            eprintln!("PersistenceService: Channel shut down: {:?}", e);
+                        Err(_) => {
+                            println!("PersistenceService: Channel shut down");
                             break;
                         }
                     }
@@ -127,7 +127,7 @@ mod implementation {
                     );
                 }
                 Err(e) => {
-                    eprintln!("Error inserting object: {:?}; {:?}", e, id);
+                    println!("Error inserting object: {:?}; {:?}", e, id);
                 }
             };
             Ok(())

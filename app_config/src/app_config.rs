@@ -2,7 +2,7 @@ use config::{Config, ConfigError, File};
 use serde::Deserialize;
 use std::{collections::HashMap, env};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AppConfig {
     pub access_token: String,
     pub sandbox_token: String,

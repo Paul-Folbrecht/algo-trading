@@ -92,7 +92,7 @@ mod implementation {
                 .iter()
                 .for_each(|quote| match sender.send(quote.clone()) {
                     Ok(_) => (),
-                    Err(e) => eprintln!("Error sending quote to subscriber: {}", e),
+                    Err(e) => println!("Error sending quote to subscriber: {}", e),
                 });
             Ok(receiver)
         }
