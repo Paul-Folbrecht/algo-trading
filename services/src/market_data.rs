@@ -61,6 +61,9 @@ mod implementation {
                     match authenticate_and_connect(&token, symbols.clone()) {
                         Ok(mut socket) => {
                             while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+                                // Note: The tungstenite API is rather non-ideal in that there is no non-blockng read.
+                                // Tradier will drop the connection at EOD or after a period of inactivity, but
+                                // we might have to wait for that to occur before the service can shutdown.
                                 match socket.read() {
                                     Ok(msg) => {
                                         handle_quote(msg, subscribers.clone());
