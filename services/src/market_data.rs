@@ -28,6 +28,8 @@ pub fn new(access_token: String) -> Arc<impl MarketDataService> {
 
 mod implementation {
     use super::*;
+    use std::{net::TcpStream, thread, time::Duration};
+    use tungstenite::{stream::MaybeTlsStream, WebSocket};
 
     #[derive(Deserialize)]
     struct AuthResponse {
@@ -51,60 +53,38 @@ mod implementation {
             shutdown: Arc<AtomicBool>,
             symbols: Vec<String>,
         ) -> Result<JoinHandle<()>, String> {
-            let response = authenticate(&self.access_token).expect("Error authenticating");
-            let session_id = &response.stream.sessionid;
-            let symbols_json = serde_json::to_string(&symbols).expect("Error serializing symbols");
+            let token = self.access_token.clone();
+            let subscribers = self.subscribers.clone();
 
-            match connect("wss://ws.tradier.com/v1/markets/events") {
-                Ok((mut socket, _)) => {
-                    let message = format!(
-                        "{{\"symbols\": {}, \"sessionid\": \"{}\", \"filter\": [\"quote\"], \"linebreak\": true}}",
-                        symbols_json,
-                        session_id
-                    );
-                    socket
-                        .send(Message::Text(message))
-                        .expect("Error sending message");
-
-                    let subscribers = self.subscribers.clone();
-                    let handle = std::thread::spawn(move || {
-                        while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
-                            match socket.read() {
-                                Ok(msg) => {
-                                    let msg =
-                                        msg.into_text().expect("Error converting message to text");
-                                    let quote = serde_json::from_str::<Quote>(msg.as_str())
-                                        .expect("Error parsing JSON");
-                                    println!("MarketDataService received quote: {:?}", quote);
-
-                                    for subscriber in subscribers.lock().unwrap().iter() {
-                                        match subscriber.0.send(quote.clone()) {
-                                            Ok(_) => (),
-                                            Err(e) => println!(
-                                                "MarketDataService: Error sending quote to subscriber: {}",
-                                                e
-                                            ),
-                                        }
+            let handle = thread::spawn(move || {
+                while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+                    match authenticate_and_connect(&token, symbols.clone()) {
+                        Ok(mut socket) => {
+                            while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+                                match socket.read() {
+                                    Ok(msg) => {
+                                        handle_quote(msg, subscribers.clone());
                                     }
-                                }
-
-                                Err(e) => {
-                                    println!(
-                                        "MarketDataService: Error reading message - likely EOD connection close - shutting down: {}",
-                                        e
-                                    );
-                                    shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
+                                    Err(e) => {
+                                        println!("MarketDataService: Error reading message - possible EOD/inactivity connection close: {}", e);
+                                        println!("MarketDataService: Reconnecting unless service shutdown");
+                                        thread::sleep(Duration::from_secs(1));
+                                        break;
+                                    }
                                 }
                             }
                         }
-                        println!("MarketDataService shutting down");
-                    });
-
-                    Ok(handle)
+                        Err(e) => {
+                            println!("MarketDataService: Error connecting: {}", e);
+                            thread::sleep(Duration::from_secs(5));
+                        }
+                    }
                 }
 
-                Err(e) => Err(e.to_string()),
-            }
+                println!("MarketDataService shutting down");
+            });
+
+            Ok(handle)
         }
 
         fn subscribe(&self) -> Result<Receiver<Quote>, String> {
@@ -133,6 +113,48 @@ mod implementation {
                 }
                 Err(e) => Err(e.to_string()),
             }
+        }
+    }
+
+    fn handle_quote(msg: Message, subscribers: Arc<Mutex<Vec<(Sender<Quote>, Receiver<Quote>)>>>) {
+        let msg = msg.into_text().expect("Error converting message to text");
+        let quote = serde_json::from_str::<Quote>(msg.as_str()).expect("Error parsing JSON");
+        println!("MarketDataService received quote: {:?}", quote);
+
+        for subscriber in subscribers.lock().unwrap().iter() {
+            match subscriber.0.send(quote.clone()) {
+                Ok(_) => (),
+                Err(e) => println!(
+                    "MarketDataService: Error sending quote to subscriber: {}",
+                    e
+                ),
+            }
+        }
+    }
+
+    fn authenticate_and_connect(
+        access_token: &str,
+        symbols: Vec<String>,
+    ) -> Result<WebSocket<MaybeTlsStream<TcpStream>>, String> {
+        let response = authenticate(access_token).map_err(|e| e.to_string())?;
+        let session_id = &response.stream.sessionid;
+        let symbols_json = serde_json::to_string(&symbols).expect("Error serializing symbols");
+
+        match connect("wss://ws.tradier.com/v1/markets/events") {
+            Ok((mut socket, _)) => {
+                let message = format!(
+                    "{{\"symbols\": {}, \"sessionid\": \"{}\", \"filter\": [\"quote\"], \"linebreak\": true}}",
+                    symbols_json,
+                    session_id
+                );
+                socket
+                    .send(Message::Text(message))
+                    .expect("Error sending message");
+
+                Ok(socket)
+            }
+
+            Err(e) => Err(e.to_string()),
         }
     }
 

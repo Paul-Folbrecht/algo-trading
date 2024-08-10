@@ -24,10 +24,11 @@ pub fn new(url: String) -> Arc<impl PersistenceService> {
 
 mod implementation {
     use super::*;
+    use crossbeam_channel::TryRecvError;
     use domain::domain::RealizedPnL;
     use mongodb::bson::{self, doc, Bson};
     use serde::Serialize;
-    use std::any::Any;
+    use std::{any::Any, thread, time::Duration};
 
     pub struct Persistence {
         pub client: Client,
@@ -48,20 +49,27 @@ mod implementation {
 
             let handle = std::thread::spawn(move || {
                 while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
-                    match writer.receiver.recv() {
+                    match writer.receiver.try_recv() {
                         Ok(p) => match writer.write(p) {
                             Ok(_) => {}
                             Err(e) => {
                                 println!("Error writing object: {:?}", e);
                             }
                         },
-                        Err(_) => {
-                            println!("PersistenceService: Channel shut down");
-                            break;
-                        }
+
+                        Err(e) => match e {
+                            TryRecvError::Empty => {
+                                thread::sleep(Duration::from_millis(10));
+                            }
+                            TryRecvError::Disconnected => {
+                                println!("PersistenceService: Channel disconnected");
+                                break;
+                            }
+                        },
                     }
                 }
             });
+
             Ok(handle)
         }
 

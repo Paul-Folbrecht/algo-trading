@@ -27,6 +27,8 @@ pub fn new(
 }
 
 mod implementation {
+    use std::sync::atomic::AtomicBool;
+
     use super::*;
     use services::trading::{self, TradingService};
 
@@ -81,6 +83,12 @@ mod implementation {
                                         "Strategy '{}' ran successfully for {}",
                                         strategy.name, date
                                     );
+
+                                    // Because TradingService uses a non-blocking read in another thread, we need to sleep for a bit
+                                    // This is non-ideal but not too big a deal.
+                                    std::thread::sleep(std::time::Duration::from_millis(10));
+
+                                    shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
                                     trading_service
                                         .shutdown()
                                         .expect("Unexpected error shutting down trading_service");

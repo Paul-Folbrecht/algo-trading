@@ -9,7 +9,7 @@ use std::{
 };
 
 use app_config::app_config::AppConfig;
-use chrono::Local;
+use chrono::{Local, NaiveTime};
 use services::persistence::PersistenceService;
 use services::trading::TradingService;
 use services::{historical_data, market_data, orders, trading};
@@ -19,23 +19,24 @@ fn main() {
     let config = AppConfig::new().expect("Could not load config");
     println!("Config:\n{:?}", config);
 
+    let reset_time = Local::now()
+        .with_time(NaiveTime::parse_from_str("18:00:00", "%H:%M:%S").unwrap())
+        .unwrap();
+
     loop {
         let (shutdown, handle) = init_for_today(config.clone());
 
-        // sleep for 5 minutes, check if time > midnight
-        // if time > midnight:
-        // - set shutdown to true
-        // - join all threads - market_data, trading_services
-        // - call init_for_today again, store new shutdown
         thread::sleep(Duration::from_secs(60));
-        shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
-        println!("Trading day ended - resetting");
 
-        handle
-            .join()
-            .expect("Failed to join MarketDataService thread");
-        println!("All threads exited successfully");
-        break;
+        if Local::now() > reset_time {
+            shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
+            println!("Trading day ended - resetting");
+
+            handle
+                .join()
+                .expect("Failed to join MarketDataService thread");
+            println!("All threads exited successfully");
+        }
     }
 }
 

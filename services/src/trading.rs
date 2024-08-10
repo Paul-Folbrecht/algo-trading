@@ -39,7 +39,7 @@ pub fn new(
 
 mod implementation {
     use super::*;
-    use crossbeam_channel::Receiver;
+    use crossbeam_channel::{Receiver, TryRecvError};
     use std::{
         collections::HashMap,
         thread::{self, JoinHandle},
@@ -99,12 +99,18 @@ mod implementation {
                                         *symbol_capital,
                                         &strategy,
                                         orders.clone(),
-                                    );
+                                    )
                                 }
 
-                                Err(_) => {
-                                    thread::sleep(Duration::from_millis(100));
-                                }
+                                Err(e) => match e {
+                                    TryRecvError::Empty => {
+                                        thread::sleep(Duration::from_millis(1));
+                                    }
+                                    TryRecvError::Disconnected => {
+                                        println!("TradingService: MarketData channel disconnected");
+                                        break;
+                                    }
+                                },
                             }
                         }
 
