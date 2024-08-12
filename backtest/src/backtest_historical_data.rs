@@ -47,10 +47,7 @@ mod implementation {
         fn fetch(&self, end: NaiveDate) -> Arc<HashMap<String, Vec<Day>>> {
             // end is some past trading day. We want to fetch from end - range - hist_data_range to end
             let start = end - chrono::Duration::days(self.hist_data_range);
-            info!(
-                "BacktestHistoricalData.fetch: fetching from {} to {}",
-                start, end
-            );
+            info!("Fetching from {} to {}", start, end);
             let data = self
                 .underlying
                 .fetch(end)

@@ -70,17 +70,14 @@ mod implementation {
         > TradingService for Trading<M, H, O>
     {
         fn run(&mut self) -> Result<(), String> {
-            info!(
-                "Running TradingService with strategy: {:?}",
-                self.strategy_name
-            );
+            info!("Running with strategy: {:?}", self.strategy_name);
             let symbol_data: HashMap<String, SymbolData> =
                 load_history(self.today, &self.symbols, self.historical_data.clone());
             let orders: Arc<O> = self.orders.clone();
 
             match self.market_data.subscribe() {
                 Ok(rx) => {
-                    info!("TradingService subscribed to MarketDataService");
+                    info!("Subscribed to MarketDataService");
                     let strategy = Strategy::new(&self.strategy_name, self.symbols.clone());
                     let capital = self.capital.clone();
                     let date = self.today;
@@ -91,7 +88,7 @@ mod implementation {
                             match rx.try_recv() {
                                 Ok(quote) => {
                                     let symbol_capital = capital.get(&quote.symbol).unwrap_or(&0);
-                                    info!("TradingService received quote:\n{:?}", quote);
+                                    info!("Received quote:\n{:?}", quote);
                                     handle_quote(
                                         date,
                                         &symbol_data,
@@ -107,14 +104,14 @@ mod implementation {
                                         thread::sleep(Duration::from_millis(1));
                                     }
                                     TryRecvError::Disconnected => {
-                                        info!("TradingService: MarketData channel disconnected");
+                                        info!("MarketData channel disconnected");
                                         break;
                                     }
                                 },
                             }
                         }
 
-                        info!("TradingService shutting down");
+                        info!("Shutting down");
                     }))
                 }
                 Err(e) => return Err(format!("Failed to subscribe to MarketDataService: {}", e)),
@@ -130,7 +127,7 @@ mod implementation {
             self.thread_handle
                 .take()
                 .map(|h| h.join().unwrap())
-                .map(|_| info!("TradingService shut down"))
+                .map(|_| info!("Shut down"))
                 .ok_or("No thread handle to join".to_string())
         }
     }

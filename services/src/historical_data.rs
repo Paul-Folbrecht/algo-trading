@@ -29,7 +29,7 @@ pub fn fetch(
     end: NaiveDate,
 ) -> HashMap<String, Vec<Day>> {
     let start = end - chrono::Duration::days(range);
-    info!("Fetching historical data from {} to {}", start, end);
+    info!("Fetching from {} to {}", start, end);
     symbols
         .iter()
         .map(|symbol| {

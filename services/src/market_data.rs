@@ -70,8 +70,8 @@ mod implementation {
                                         handle_quote(msg, subscribers.clone());
                                     }
                                     Err(e) => {
-                                        info!("MarketDataService: Error reading message - possible EOD/inactivity connection close: {}", e);
-                                        info!("MarketDataService: Reconnecting unless shutdown flag set");
+                                        info!("Error reading message - possible EOD/inactivity connection close: {}", e);
+                                        info!("Reconnecting unless shutdown flag set");
                                         thread::sleep(Duration::from_secs(1));
                                         break;
                                     }
@@ -79,13 +79,13 @@ mod implementation {
                             }
                         }
                         Err(e) => {
-                            info!("MarketDataService: Error connecting: {}", e);
+                            info!("Error connecting: {}", e);
                             thread::sleep(Duration::from_secs(5));
                         }
                     }
                 }
 
-                info!("MarketDataService shutting down");
+                info!("Shutting down");
             });
 
             Ok(handle)
@@ -123,15 +123,12 @@ mod implementation {
     fn handle_quote(msg: Message, subscribers: Arc<Mutex<Vec<(Sender<Quote>, Receiver<Quote>)>>>) {
         let msg = msg.into_text().expect("Error converting message to text");
         let quote = serde_json::from_str::<Quote>(msg.as_str()).expect("Error parsing JSON");
-        info!("MarketDataService received quote: {:?}", quote);
+        info!("Received quote: {:?}", quote);
 
         for subscriber in subscribers.lock().unwrap().iter() {
             match subscriber.0.send(quote.clone()) {
                 Ok(_) => (),
-                Err(e) => info!(
-                    "MarketDataService: Error sending quote to subscriber: {}",
-                    e
-                ),
+                Err(e) => info!("Error sending quote to subscriber: {}", e),
             }
         }
     }
