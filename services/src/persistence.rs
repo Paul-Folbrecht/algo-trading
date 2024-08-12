@@ -1,5 +1,6 @@
 use crossbeam_channel::{Receiver, Sender};
 use domain::domain::{Order, Persistable, Position};
+use log::*;
 use mongodb::sync::Client;
 use std::{
     sync::{atomic::AtomicBool, Arc},
@@ -53,7 +54,7 @@ mod implementation {
                         Ok(p) => match writer.write(p) {
                             Ok(_) => {}
                             Err(e) => {
-                                println!("Error writing object: {:?}", e);
+                                info!("Error writing object: {:?}", e);
                             }
                         },
 
@@ -62,7 +63,7 @@ mod implementation {
                                 thread::sleep(Duration::from_millis(10));
                             }
                             TryRecvError::Disconnected => {
-                                println!("PersistenceService: Channel disconnected");
+                                info!("PersistenceService: Channel disconnected");
                                 break;
                             }
                         },
@@ -129,13 +130,13 @@ mod implementation {
                     let mongo_id = result
                         .upserted_id
                         .map(|id| id.as_object_id().expect("Cast to ObjectId failed"));
-                    println!(
+                    info!(
                         "Inserted/updated object with id, mongo id: {}, {:?}",
                         id, mongo_id
                     );
                 }
                 Err(e) => {
-                    println!("Error inserting object: {:?}; {:?}", e, id);
+                    info!("Error inserting object: {:?}; {:?}", e, id);
                 }
             };
             Ok(())

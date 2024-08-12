@@ -9,42 +9,35 @@ use std::{
 };
 
 use app_config::app_config::AppConfig;
-use chrono::{Local, NaiveTime};
+use chrono::{Local, NaiveDate};
+use log::*;
+use log4rs;
 use services::persistence::PersistenceService;
 use services::trading::TradingService;
 use services::{historical_data, market_data, orders, trading};
 use services::{market_data::MarketDataService, persistence};
 
 fn main() {
+    log4rs::init_file("config/log4rs.yaml", Default::default()).unwrap();
     let config = AppConfig::new().expect("Could not load config");
-    println!("Config:\n{:?}", config);
+    info!("Config:\n{:?}", config);
 
     let mut today = Local::now().naive_local().date();
-    // let reset_time = Local::now()
-    //     .with_time(NaiveTime::parse_from_str("18:00:00", "%H:%M:%S").unwrap())
-    //     .unwrap();
-
     let (mut shutdown, mut handle) = init_for_new_day(today, config.clone());
+
     loop {
         thread::sleep(Duration::from_secs(300));
 
-        // println!(
-        //     "Current time: {:?}; Reset time: {:?}",
-        //     Local::now(),
-        //     reset_time
-        // );
-
         if Local::now().naive_local().date() > today {
             shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
-            println!("Trading day ended - resetting");
-            // TODO: WE NEED CURRENT DAY + 1 HERE...
 
             handle
                 .join()
                 .expect("Failed to join MarketDataService thread");
-            println!("All threads exited successfully");
+            info!("All threads exited successfully");
 
             today = Local::now().naive_local().date();
+            info!("Trading day ended - resetting for {}", today);
             (shutdown, handle) = init_for_new_day(today, config.clone());
         }
     }
@@ -102,7 +95,7 @@ fn init_for_new_day(today: NaiveDate, config: AppConfig) -> (Arc<AtomicBool>, Jo
         );
         match trading_service.run() {
             Ok(_) => (),
-            Err(e) => println!("Error starting TradingService {}: {}", strategy.name, e),
+            Err(e) => info!("Error starting TradingService {}: {}", strategy.name, e),
         }
     });
 

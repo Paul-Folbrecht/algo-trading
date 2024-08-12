@@ -1,8 +1,8 @@
-use std::sync::Arc;
-
 use crate::persistence::PersistenceService;
 use core::http::*;
 use domain::domain::*;
+use log::*;
+use std::sync::Arc;
 use std::{collections::HashMap, sync::Mutex};
 
 pub trait OrderService {
@@ -18,7 +18,7 @@ pub fn new(
     persistence: Arc<impl PersistenceService + Send + Sync>,
 ) -> Result<Arc<impl OrderService>, String> {
     let positions = implementation::read_positions(&base_url, &access_token, &account_id)?;
-    println!("Read positions from broker:\n{:?}", positions);
+    info!("Read positions from broker:\n{:?}", positions);
     implementation::update_local_positions(persistence.clone(), &positions)?;
 
     Ok(Arc::new(implementation::Orders {
@@ -69,24 +69,24 @@ pub mod implementation {
             match response {
                 Ok(response) => match response.order.status.as_str() {
                     "ok" => {
-                        println!("Response: {:?}", response);
+                        info!("Response: {:?}", response);
                         let new_order = order.with_id(response.order.id);
                         match self.persistence.write(Box::new(new_order.clone())) {
                             Ok(_) => {}
-                            Err(e) => println!("Error writing order: {}", e),
+                            Err(e) => info!("Error writing order: {}", e),
                         }
 
                         let position = position_from(&new_order, self.get_position(&order.symbol));
                         match self.persistence.write(Box::new(position.clone())) {
                             Ok(_) => self.update_position(&position),
-                            Err(e) => println!("Error writing position: {}", e),
+                            Err(e) => info!("Error writing position: {}", e),
                         }
 
                         if order.side == Side::Sell {
                             let pnl = calc_pnl(position, &order, strategy);
                             match self.persistence.write(Box::new(pnl.clone())) {
-                                Ok(_) => println!("Generated P&L: {:?}", pnl),
-                                Err(e) => println!("Error writing position: {}", e),
+                                Ok(_) => info!("Generated P&L: {:?}", pnl),
+                                Err(e) => info!("Error writing position: {}", e),
                             }
                         }
 
@@ -159,7 +159,7 @@ pub mod implementation {
         let proceeds = price * order.quantity as f64;
         let pnl = proceeds - position.cost_basis;
 
-        println!(
+        info!(
             "Calced Realized P&L; proceeds: {}; cost basis: {}; pnl: {}; price: {}; quantity: {}",
             proceeds, position.cost_basis, pnl, price, order.quantity
         );
@@ -188,7 +188,7 @@ pub mod implementation {
         account_id: &str,
     ) -> Result<HashMap<String, Position>, String> {
         let url = format!("https://{}/v1/accounts/{}/positions", base_url, account_id);
-        println!("url: {}", url);
+        info!("url: {}", url);
         let response = get::<PositionResponse>(&url, access_token);
 
         match response {
@@ -204,7 +204,7 @@ pub mod implementation {
                 Ok(positions)
             }
             Err(e) => {
-                println!("Error reading positions - probably there are < 2: {}", e);
+                info!("Error reading positions - probably there are < 2: {}", e);
                 Ok(HashMap::new())
             }
         }

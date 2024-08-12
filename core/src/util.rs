@@ -1,3 +1,4 @@
+use log::*;
 use num_format::{Locale, ToFormattedString};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -8,7 +9,7 @@ pub fn time<T>(label: &str, f: impl FnOnce() -> T) -> T {
     let now = Instant::now();
     let result = f();
     let elapsed = now.elapsed().as_millis();
-    println!(
+    info!(
         "Time for {}: {}ms",
         label,
         elapsed.to_formatted_string(&Locale::en)
@@ -27,8 +28,8 @@ where
         keys
     };
 
-    println!("\n{}:\n", label);
+    info!("\n{}:\n", label);
     sorted_keys.into_iter().for_each(|k| {
-        println!("{:?}: {:?}\n", k, map.get(k).unwrap());
+        info!("{:?}: {:?}\n", k, map.get(k).unwrap());
     });
 }

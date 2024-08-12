@@ -1,5 +1,6 @@
 use chrono::{DateTime, Local, NaiveDate};
 use core::serde::{millis_date_time_format, rfc_3339_date_time_format, string_date_format};
+use log::*;
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
@@ -225,12 +226,12 @@ impl StrategyHandler for Strategy {
         match self {
             Strategy::MeanReversion { symbols } => {
                 if symbols.contains(&quote.symbol) {
-                    println!("MeanReversionStrategy handling quote: {:?}", quote);
-                    println!(
+                    info!("MeanReversionStrategy handling quote: {:?}", quote);
+                    info!(
                         "Px: {}; Mean: {}; Std Dev: {}",
                         quote.ask, data.mean, data.std_dev
                     );
-                    println!(
+                    info!(
                         "quote.ask: {}; (mean - 2.0 * std_dev): {}",
                         quote.ask,
                         data.mean - 2.0 * data.std_dev
@@ -240,17 +241,17 @@ impl StrategyHandler for Strategy {
                     let sell = quote.ask > data.mean + 2.0 * data.std_dev;
 
                     if buy {
-                        println!("***Buy signal for {}***", quote.symbol);
+                        info!("***Buy signal for {}***", quote.symbol);
                         Ok(Signal::Buy)
                     } else if sell {
-                        println!("***Sell signal for {}***", quote.symbol);
+                        info!("***Sell signal for {}***", quote.symbol);
                         Ok(Signal::Sell)
                     } else {
-                        println!("No signal for {}", quote.symbol);
+                        info!("No signal for {}", quote.symbol);
                         Ok(Signal::None)
                     }
                 } else {
-                    println!("Symbol {} not in strategy", quote.symbol);
+                    info!("Symbol {} not in strategy", quote.symbol);
                     Ok(Signal::None)
                 }
             }

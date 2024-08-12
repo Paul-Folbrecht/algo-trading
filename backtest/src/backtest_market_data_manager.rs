@@ -2,6 +2,7 @@ use crate::backtest_historical_data::BacktestHistoricalDataManager;
 use chrono::{DateTime, Local, NaiveDate, NaiveTime};
 use core::util::print_map;
 use domain::domain::{Day, Quote};
+use log::*;
 use services::market_data::MarketDataService;
 use std::{collections::HashMap, sync::Arc};
 
@@ -26,7 +27,7 @@ pub fn new(
         .flatten()
         .cloned()
         .collect();
-    println!("\n\nBacktestMarketDataManager: history:\n{:?}", history);
+    info!("\n\nBacktestMarketDataManager: history:\n{:?}", history);
 
     let mut quotes: HashMap<NaiveDate, Vec<Quote>> = HashMap::new();
     for day in history {
@@ -92,7 +93,7 @@ mod implementation {
                 .iter()
                 .for_each(|quote| match sender.send(quote.clone()) {
                     Ok(_) => (),
-                    Err(e) => println!("Error sending quote to subscriber: {}", e),
+                    Err(e) => info!("Error sending quote to subscriber: {}", e),
                 });
             Ok(receiver)
         }

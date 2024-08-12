@@ -7,6 +7,8 @@ use backtest_service::BacktestService;
 use chrono::Local;
 use core::util::time;
 use itertools::Itertools;
+use log::*;
+use log4rs;
 use services::historical_data;
 
 mod backtest_historical_data;
@@ -15,8 +17,9 @@ mod backtest_orders;
 mod backtest_service;
 
 fn main() {
+    log4rs::init_file("config/backtest-log4rs.yaml", Default::default()).unwrap();
     let config = AppConfig::new().expect("Could not load config");
-    println!("Config:\n{:?}", config);
+    info!("Config:\n{:?}", config);
 
     let end = Local::now().naive_local().date();
     let symbols = config.all_symbols();
@@ -56,12 +59,12 @@ fn main() {
     time("backtest_service.run()", || match backtest_service.run() {
         Ok(_) => {
             let pnl = orders.realized_pnl();
-            println!(
+            info!(
                 "\nBacktest completed successfully\n\nOpen positions:\n{:?}\n\nRealized P&L:\n{:?}\n\nTotal P&L: {}\n",
                 orders.open_positions().iter().format("\n"),
                 pnl.iter().format("\n"),
                 pnl.iter().map(|pnl| pnl.pnl).sum::<f64>());
         }
-        Err(e) => println!("Backtest failed: {}", e),
+        Err(e) => info!("Backtest failed: {}", e),
     })
 }

@@ -1,11 +1,11 @@
-use std::{fmt::Display, io::Read};
-
 use backoff::{retry, Error, ExponentialBackoff};
+use log::*;
 use reqwest::{
     blocking::{Client, Response},
     header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, CONTENT_LENGTH},
 };
 use serde::de::DeserializeOwned;
+use std::{fmt::Display, io::Read};
 
 pub fn get<T: DeserializeOwned>(url: &str, token: &str) -> Result<T, String> {
     let op = || {
@@ -29,7 +29,7 @@ pub fn post<T: DeserializeOwned>(url: &str, token: &str, body: String) -> Result
             .map_err(backoff::Error::transient)
             .unwrap()
             .text();
-        println!("\n\nresponse:\n{:?}", response);
+        info!("\n\nresponse:\n{:?}", response);
 
         Client::new()
             .post(url)

@@ -1,6 +1,7 @@
 use crate::backtest_market_data_manager::BacktestMarketDataManager;
 use app_config::app_config::Strategy;
 use chrono::NaiveDate;
+use log::*;
 use services::{historical_data::HistoricalDataService, orders::OrderService};
 use std::sync::Arc;
 
@@ -56,13 +57,13 @@ mod implementation {
         //   - run() strategies - will subscribe to MarketDataService and be fed quotes
         fn run(&self) -> Result<(), String> {
             let start = self.end - chrono::Duration::days(self.backtest_range);
-            println!("Running backtest from {} to {}", start, self.end);
+            info!("Running backtest from {} to {}", start, self.end);
 
             for i in 0..=self.backtest_range {
                 let date = start + chrono::Duration::days(i);
                 let shutdown = Arc::new(AtomicBool::new(false));
 
-                println!("\nRunning for {}", date);
+                info!("\nRunning for {}", date);
                 match self.market_data_manager.service_for_date(date) {
                     Ok(market_data) => {
                         self.strategies.clone().into_iter().for_each(|strategy| {
@@ -79,7 +80,7 @@ mod implementation {
 
                             match trading_service.run() {
                                 Ok(_) => {
-                                    println!(
+                                    info!(
                                         "Strategy '{}' ran successfully for {}",
                                         strategy.name, date
                                     );
@@ -94,16 +95,13 @@ mod implementation {
                                         .expect("Unexpected error shutting down trading_service");
                                 }
                                 Err(e) => {
-                                    println!(
-                                        "Error starting TradingService {}: {}",
-                                        strategy.name, e
-                                    )
+                                    info!("Error starting TradingService {}: {}", strategy.name, e)
                                 }
                             }
                         });
                     }
                     Err(_) => {
-                        println!("Skipping {} - no data (weekend or holiday)", date);
+                        info!("Skipping {} - no data (weekend or holiday)", date);
                         continue;
                     }
                 }
