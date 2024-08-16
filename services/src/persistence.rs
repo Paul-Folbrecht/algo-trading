@@ -1,7 +1,10 @@
 use crossbeam_channel::{Receiver, Sender};
 use domain::domain::{Order, Persistable, Position};
 use log::*;
-use mongodb::sync::Client;
+use mongodb::{
+    options::{ClientOptions, Credential, ServerApi, ServerApiVersion},
+    sync::Client,
+};
 use std::{
     sync::{atomic::AtomicBool, Arc},
     thread::JoinHandle,
@@ -13,9 +16,29 @@ pub trait PersistenceService {
     fn drop_positions(&self) -> Result<(), String>;
 }
 
+// fn main() -> mongodb::error::Result<()> {
+//     let mut client_options =
+//     ClientOptions::parse("mongodb://localhost:27017/")?;
+
+//     // Set the server_api field of the client_options object to set the version of the Stable API on the client
+//     let server_api = ServerApi::builder().version(ServerApiVersion::V1).build();
+//     client_options.server_api = Some(server_api);
+
+//     // Get a handle to the cluster
+//     let client = Client::with_options(client_options)?;
+//     Ok(())
+// }
+
 pub fn new(url: String) -> Arc<impl PersistenceService> {
-    let client = Client::with_uri_str(url).expect("Could not connect to MongoDB");
+    // ClientOptions::parse("mongodb+srv://paulfolbrecht:<password>@cluster0.31ie7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")?;
+    let mut client_options =
+        ClientOptions::parse("mongodb://localhost:27017/").expect("Could not parse MongoDB URL");
+    let server_api = ServerApi::builder().version(ServerApiVersion::V1).build();
+    client_options.server_api = Some(server_api);
+
+    let client = Client::with_options(client_options).expect("Could not connect to MongoDB");
     let (sender, receiver) = crossbeam_channel::unbounded();
+
     Arc::new(implementation::Persistence {
         client,
         sender,
@@ -131,8 +154,8 @@ mod implementation {
                         .upserted_id
                         .map(|id| id.as_object_id().expect("Cast to ObjectId failed"));
                     info!(
-                        "Inserted/updated object with id, mongo id: {}, {:?}",
-                        id, mongo_id
+                        "Inserted/updated object into '{}' with id, mongo id: {}, {:?}",
+                        collection_name, id, mongo_id
                     );
                 }
                 Err(e) => {

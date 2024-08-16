@@ -9,7 +9,6 @@ appenders:
     path: "log/trading.log"
     encoder:
       pattern: "[{d(%Y-%m-%d %H:%M:%S%.6f)} {M}] {m}{n}"
-      # pattern: "[{d(%Y-%m-%d T%HH:mm:ss,nnnnnn}) {M}] {m}{n}"
     policy:
       kind: compound
       trigger:
