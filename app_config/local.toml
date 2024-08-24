@@ -4,6 +4,8 @@ sandbox_token = "ywVWpNLzVRHnVSBhFWS2u71x2Wai"
 account_id = "VA4503134"
 hist_data_range = 20
 backtest_range = 730
+mongo_url = "mongodb://localhost:27017/"
+# mongo_url = "mongodb+srv://paulfolbrecht:A6NNR7A7oP3dN6RJ@cluster0.31ie7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 [[strategies]]
 name = "mean-reversion"

@@ -7,3 +7,5 @@ edition = "2021"
 app-config = { path = "../app_config" }
 services = { path = "../services" }
 chrono = "0.4.38"
+log = "0.4"
+log4rs = "1.3.0"

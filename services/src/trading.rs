@@ -1,11 +1,12 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use crate::historical_data::HistoricalDataService;
 use crate::market_data::MarketDataService;
 use crate::orders::OrderService;
 use chrono::NaiveDate;
 use domain::domain::*;
+use log::*;
+use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
 pub trait TradingService {
     fn run(&mut self) -> Result<(), String>;
@@ -20,6 +21,7 @@ pub fn new(
     market_data: Arc<impl MarketDataService + 'static + Send + Sync>,
     historical_data: Arc<impl HistoricalDataService + 'static + Send + Sync>,
     orders: Arc<impl OrderService + 'static + Send + Sync>,
+    shutdown: Arc<AtomicBool>,
 ) -> impl TradingService + 'static {
     implementation::Trading {
         today,
@@ -31,14 +33,18 @@ pub fn new(
         orders,
         thread_handle: None,
         rx: None,
+        shutdown,
     }
 }
 
 mod implementation {
-    use crossbeam_channel::Receiver;
-
     use super::*;
-    use std::{collections::HashMap, thread::JoinHandle};
+    use crossbeam_channel::{Receiver, TryRecvError};
+    use std::{
+        collections::HashMap,
+        thread::{self, JoinHandle},
+        time::Duration,
+    };
 
     pub struct Trading<
         M: MarketDataService + 'static + Send + Sync,
@@ -54,6 +60,7 @@ mod implementation {
         pub orders: Arc<O>,
         pub thread_handle: Option<JoinHandle<()>>,
         pub rx: Option<Receiver<Quote>>,
+        pub shutdown: Arc<AtomicBool>,
     }
 
     impl<
@@ -63,40 +70,48 @@ mod implementation {
         > TradingService for Trading<M, H, O>
     {
         fn run(&mut self) -> Result<(), String> {
-            println!(
-                "Running TradingService with strategy: {:?}",
-                self.strategy_name
-            );
+            info!("Running with strategy: {:?}", self.strategy_name);
             let symbol_data: HashMap<String, SymbolData> =
                 load_history(self.today, &self.symbols, self.historical_data.clone());
             let orders: Arc<O> = self.orders.clone();
 
             match self.market_data.subscribe() {
                 Ok(rx) => {
-                    println!("TradingService subscribed to MarketDataService");
+                    info!("Subscribed to MarketDataService");
                     let strategy = Strategy::new(&self.strategy_name, self.symbols.clone());
                     let capital = self.capital.clone();
                     let date = self.today;
+                    let shutdown = self.shutdown.clone();
 
-                    self.thread_handle = Some(std::thread::spawn(move || loop {
-                        match rx.recv() {
-                            Ok(quote) => {
-                                let symbol_capital = capital.get(&quote.symbol).unwrap_or(&0);
-                                println!("TradingService received quote:\n{:?}", quote);
-                                handle_quote(
-                                    date,
-                                    &symbol_data,
-                                    &quote,
-                                    *symbol_capital,
-                                    &strategy,
-                                    orders.clone(),
-                                );
-                            }
-                            Err(e) => {
-                                eprintln!("TradingService: Market Data channel shut down: {}", e);
-                                break;
+                    self.thread_handle = Some(std::thread::spawn(move || {
+                        while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+                            match rx.try_recv() {
+                                Ok(quote) => {
+                                    let symbol_capital = capital.get(&quote.symbol).unwrap_or(&0);
+                                    info!("Received quote:\n{:?}", quote);
+                                    handle_quote(
+                                        date,
+                                        &symbol_data,
+                                        &quote,
+                                        *symbol_capital,
+                                        &strategy,
+                                        orders.clone(),
+                                    )
+                                }
+
+                                Err(e) => match e {
+                                    TryRecvError::Empty => {
+                                        thread::sleep(Duration::from_millis(1));
+                                    }
+                                    TryRecvError::Disconnected => {
+                                        info!("MarketData channel disconnected");
+                                        break;
+                                    }
+                                },
                             }
                         }
+
+                        info!("Shutting down");
                     }))
                 }
                 Err(e) => return Err(format!("Failed to subscribe to MarketDataService: {}", e)),
@@ -112,7 +127,7 @@ mod implementation {
             self.thread_handle
                 .take()
                 .map(|h| h.join().unwrap())
-                .map(|_| println!("TradingService shut down"))
+                .map(|_| info!("Shut down"))
                 .ok_or("No thread handle to join".to_string())
         }
     }
@@ -133,15 +148,15 @@ mod implementation {
                         maybe_create_order(date, signal, maybe_position, quote, capital)
                     {
                         match orders.create_order(order.clone(), strategy.to_string()) {
-                            Ok(o) => println!("Order created: {:?}", o),
-                            Err(e) => eprintln!("Error creating order: {}", e),
+                            Ok(o) => info!("Order created: {:?}", o),
+                            Err(e) => info!("Error creating order: {}", e),
                         }
                     }
                 }
-                Err(e) => eprintln!("Error from strategy: {}", e),
+                Err(e) => info!("Error from strategy: {}", e),
             }
         } else {
-            eprintln!("No symbol data found for {}", quote.symbol);
+            info!("No symbol data found for {}", quote.symbol);
         }
     }
 
@@ -160,7 +175,7 @@ mod implementation {
                     .unwrap_or(0.0) as i64;
                 let remaining_capital = capital - present_market_value;
                 let shares = (remaining_capital as f64 / quote.ask) as i64;
-                println!(
+                info!(
                     "Buy signal for {} at {}; present_market_value: {}; remaining_capital: {}; shares to buy: {}",
                     quote.symbol, quote.ask, present_market_value, remaining_capital, shares
                 );
@@ -175,7 +190,7 @@ mod implementation {
                         px: Some(quote.ask),
                     }),
                     _ => {
-                        println!("Buy signal for {}, but no capital", quote.symbol);
+                        info!("Buy signal for {}, but no capital", quote.symbol);
                         None
                     }
                 }
@@ -193,7 +208,7 @@ mod implementation {
                         px: Some(quote.bid),
                     }),
                     _ => {
-                        println!(
+                        info!(
                             "Sell signal for {}, but no position to unwind",
                             quote.symbol
                         );
@@ -232,7 +247,7 @@ mod implementation {
                             mean,
                             std_dev,
                         };
-                        println!("Initted history for {}", symbol);
+                        info!("Initted history for {}", symbol);
                         (symbol.to_owned(), data)
                     }
                     None => panic!("No history for {}", symbol),

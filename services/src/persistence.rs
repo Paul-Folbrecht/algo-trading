@@ -1,6 +1,10 @@
 use crossbeam_channel::{Receiver, Sender};
 use domain::domain::{Order, Persistable, Position};
-use mongodb::sync::Client;
+use log::*;
+use mongodb::{
+    options::{ClientOptions, ServerApi, ServerApiVersion},
+    sync::Client,
+};
 use std::{
     sync::{atomic::AtomicBool, Arc},
     thread::JoinHandle,
@@ -13,8 +17,13 @@ pub trait PersistenceService {
 }
 
 pub fn new(url: String) -> Arc<impl PersistenceService> {
-    let client = Client::with_uri_str(url).expect("Could not connect to MongoDB");
+    let mut client_options = ClientOptions::parse(url).expect("Could not parse MongoDB URL");
+    let server_api = ServerApi::builder().version(ServerApiVersion::V1).build();
+    client_options.server_api = Some(server_api);
+
+    let client = Client::with_options(client_options).expect("Could not connect to MongoDB");
     let (sender, receiver) = crossbeam_channel::unbounded();
+
     Arc::new(implementation::Persistence {
         client,
         sender,
@@ -24,10 +33,11 @@ pub fn new(url: String) -> Arc<impl PersistenceService> {
 
 mod implementation {
     use super::*;
+    use crossbeam_channel::TryRecvError;
     use domain::domain::RealizedPnL;
     use mongodb::bson::{self, doc, Bson};
     use serde::Serialize;
-    use std::any::Any;
+    use std::{any::Any, thread, time::Duration};
 
     pub struct Persistence {
         pub client: Client,
@@ -48,20 +58,27 @@ mod implementation {
 
             let handle = std::thread::spawn(move || {
                 while !shutdown.load(std::sync::atomic::Ordering::Relaxed) {
-                    match writer.receiver.recv() {
+                    match writer.receiver.try_recv() {
                         Ok(p) => match writer.write(p) {
                             Ok(_) => {}
                             Err(e) => {
-                                eprintln!("Error writing object: {:?}", e);
+                                info!("Error writing object: {:?}", e);
                             }
                         },
-                        Err(e) => {
-                            eprintln!("PersistenceService: Channel shut down: {:?}", e);
-                            break;
-                        }
+
+                        Err(e) => match e {
+                            TryRecvError::Empty => {
+                                thread::sleep(Duration::from_millis(10));
+                            }
+                            TryRecvError::Disconnected => {
+                                info!("PersistenceService: Channel disconnected");
+                                break;
+                            }
+                        },
                     }
                 }
             });
+
             Ok(handle)
         }
 
@@ -121,13 +138,13 @@ mod implementation {
                     let mongo_id = result
                         .upserted_id
                         .map(|id| id.as_object_id().expect("Cast to ObjectId failed"));
-                    println!(
-                        "Inserted/updated object with id, mongo id: {}, {:?}",
-                        id, mongo_id
+                    info!(
+                        "Inserted/updated object into '{}' with id, mongo id: {}, {:?}",
+                        collection_name, id, mongo_id
                     );
                 }
                 Err(e) => {
-                    eprintln!("Error inserting object: {:?}; {:?}", e, id);
+                    info!("Error inserting object: {:?}; {:?}", e, id);
                 }
             };
             Ok(())

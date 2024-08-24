@@ -1,9 +1,9 @@
-use std::{collections::HashMap, sync::Arc};
-
 use chrono::NaiveDate;
 use domain::domain::Day;
+use log::*;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
+use std::{collections::HashMap, sync::Arc};
 
 pub trait HistoricalDataService {
     fn fetch(&self, end: NaiveDate) -> Arc<HashMap<String, Vec<Day>>>;
@@ -29,7 +29,7 @@ pub fn fetch(
     end: NaiveDate,
 ) -> HashMap<String, Vec<Day>> {
     let start = end - chrono::Duration::days(range);
-    println!("Fetching historical data from {} to {}", start, end);
+    info!("Fetching from {} to {}", start, end);
     symbols
         .iter()
         .map(|symbol| {
@@ -91,12 +91,12 @@ mod implementation {
                     Ok(with_symbols)
                 }
                 Err(e) => {
-                    eprintln!("Failed to deserialize: {}", e);
+                    info!("Failed to deserialize: {}", e);
                     Err(e)
                 }
             },
             Err(e) => {
-                eprintln!("Request failed: {}", e);
+                info!("Request failed: {}", e);
                 Err(e)
             }
         }

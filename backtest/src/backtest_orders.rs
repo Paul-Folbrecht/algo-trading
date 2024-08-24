@@ -1,4 +1,5 @@
 use domain::domain::*;
+use log::*;
 use services::orders::OrderService;
 use std::sync::Arc;
 use std::{collections::HashMap, sync::Mutex};
@@ -48,7 +49,7 @@ mod implementation {
             if order.side == Side::Sell {
                 let pnl = calc_pnl(position, &order, strategy);
                 self.pnl.lock().unwrap().push(pnl.clone());
-                println!("Generated P&L: {:?}", pnl);
+                info!("Generated P&L: {:?}", pnl);
             }
 
             Ok(order)

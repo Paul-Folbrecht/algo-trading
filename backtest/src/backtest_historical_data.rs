@@ -1,5 +1,6 @@
 use chrono::NaiveDate;
 use domain::domain::Day;
+use log::*;
 use services::historical_data::HistoricalDataService;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -46,10 +47,7 @@ mod implementation {
         fn fetch(&self, end: NaiveDate) -> Arc<HashMap<String, Vec<Day>>> {
             // end is some past trading day. We want to fetch from end - range - hist_data_range to end
             let start = end - chrono::Duration::days(self.hist_data_range);
-            println!(
-                "BacktestHistoricalData.fetch: fetching from {} to {}",
-                start, end
-            );
+            info!("Fetching from {} to {}", start, end);
             let data = self
                 .underlying
                 .fetch(end)
@@ -82,7 +80,7 @@ mod implementation {
 //         let start_index = date_to_index(start, self.start);
 //         let end_index = date_to_index(end, self.start);
 
-//         println!(
+//         info!(
 //             "BacktestHistoricalData.fetch for {}: from {} to {}; indices {} - {}; symbol_history.len {}",
 //             symbol,
 //             start,

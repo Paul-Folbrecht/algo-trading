@@ -23,7 +23,7 @@ fn test_mean_reversion_strategy() {
             assert_eq!(signal, Signal::Buy);
         }
         Err(e) => {
-            eprintln!("Error: {}", e);
+            println!("Error: {}", e);
         }
     }
 
@@ -40,7 +40,7 @@ fn test_mean_reversion_strategy() {
             assert_eq!(signal, Signal::Sell);
         }
         Err(e) => {
-            eprintln!("Error: {}", e);
+            println!("Error: {}", e);
         }
     }
 
@@ -57,7 +57,7 @@ fn test_mean_reversion_strategy() {
             assert_eq!(signal, Signal::None);
         }
         Err(e) => {
-            eprintln!("Error: {}", e);
+            println!("Error: {}", e);
         }
     }
 }
