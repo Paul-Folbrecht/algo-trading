@@ -2,7 +2,7 @@ use crossbeam_channel::{Receiver, Sender};
 use domain::domain::{Order, Persistable, Position};
 use log::*;
 use mongodb::{
-    options::{ClientOptions, Credential, ServerApi, ServerApiVersion},
+    options::{ClientOptions, ServerApi, ServerApiVersion},
     sync::Client,
 };
 use std::{
@@ -16,23 +16,8 @@ pub trait PersistenceService {
     fn drop_positions(&self) -> Result<(), String>;
 }
 
-// fn main() -> mongodb::error::Result<()> {
-//     let mut client_options =
-//     ClientOptions::parse("mongodb://localhost:27017/")?;
-
-//     // Set the server_api field of the client_options object to set the version of the Stable API on the client
-//     let server_api = ServerApi::builder().version(ServerApiVersion::V1).build();
-//     client_options.server_api = Some(server_api);
-
-//     // Get a handle to the cluster
-//     let client = Client::with_options(client_options)?;
-//     Ok(())
-// }
-
 pub fn new(url: String) -> Arc<impl PersistenceService> {
-    // ClientOptions::parse("mongodb+srv://paulfolbrecht:<password>@cluster0.31ie7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")?;
-    let mut client_options =
-        ClientOptions::parse("mongodb://localhost:27017/").expect("Could not parse MongoDB URL");
+    let mut client_options = ClientOptions::parse(url).expect("Could not parse MongoDB URL");
     let server_api = ServerApi::builder().version(ServerApiVersion::V1).build();
     client_options.server_api = Some(server_api);
 
