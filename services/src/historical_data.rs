@@ -17,7 +17,6 @@ pub fn new(
 ) -> Arc<impl HistoricalDataService> {
     let history = fetch(access_token.as_str(), symbols, range, end);
     Arc::new(implementation::HistoricalData {
-        access_token,
         history: Arc::new(history),
     })
 }
@@ -44,7 +43,6 @@ mod implementation {
     use super::*;
 
     pub struct HistoricalData {
-        pub access_token: String,
         pub history: Arc<HashMap<String, Vec<Day>>>,
     }
 
