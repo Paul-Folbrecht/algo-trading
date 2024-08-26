@@ -33,11 +33,22 @@ capital = [100000, 10000]
 
 ## Building
 
-`cargo build`
+`cargo build` is all you need.
+
+## Environment
+
+The following environment variables must be set:
+
+ACCESS_TOKEN
+SANDBOX_TOKEN
+ACCOUNT_ID
+MONGO_URL
+
+(Environment rather than config for secrets per the [12-factor app](https://12factor.net/config) methodology - although I use config for non-secret settings.)
 
 ## Running Locally
 
-`./run.sh`
+`./scripts/run.sh`
 
 or
 
@@ -58,6 +69,10 @@ Alternatively, you can use a MongoDB Atlas instance - just set `mongo_url` to an
 `cargo test` requires the environment variables `TRADIER_ACCESS_TOKEN`, `TRADIER_SANDBOX_TOKEN`, and `TRADIER_ACCOUNT_ID` to be set.
 
 ## Backtesting
+
+`./scripts/backtest.sh`
+
+or
 
 `cargo run --bin backtest`
 

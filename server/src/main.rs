@@ -3,6 +3,7 @@
 
 use std::{
     collections::HashSet,
+    env,
     sync::{atomic::AtomicBool, Arc},
     thread::{self, JoinHandle},
     time::Duration,
@@ -44,17 +45,21 @@ fn main() {
 }
 
 fn init_for_new_day(today: NaiveDate, config: AppConfig) -> (Arc<AtomicBool>, JoinHandle<()>) {
-    let market_data = market_data::new(config.access_token.clone());
+    let access_token = env::var("ACCESS_TOKEN").expect("ACCESS_TOKEN not found");
+    let sandbox_token = env::var("SANDBOX_TOKEN").expect("SANDBOX_TOKEN not found");
+    let account_id = env::var("ACCOUNT_ID").expect("ACCOUNT_ID not found");
+    let mongo_url = env::var("MONGO_URL").expect("MONGO_URL not found");
+    let market_data = market_data::new(access_token.clone());
     let symbols = config.all_symbols();
     let shutdown = Arc::new(AtomicBool::new(false));
-    let persistence = persistence::new(config.mongo_url.clone());
+    let persistence = persistence::new(mongo_url.clone());
 
     persistence
         .init(shutdown.clone())
         .expect("Failed to initialize persistence");
 
     let historical_data = historical_data::new(
-        config.access_token.clone(),
+        access_token.clone(),
         symbols.clone(),
         config.hist_data_range,
         today,
@@ -62,16 +67,16 @@ fn init_for_new_day(today: NaiveDate, config: AppConfig) -> (Arc<AtomicBool>, Jo
 
     let orders = if config.sandbox {
         orders::new(
-            config.sandbox_token.clone(),
-            config.account_id.clone(),
+            sandbox_token.clone(),
+            account_id.clone(),
             "sandbox.tradier.com".into(),
             persistence.clone(),
         )
         .expect("Failed to create OrdersService")
     } else {
         orders::new(
-            config.access_token.clone(),
-            config.account_id.clone(),
+            access_token.clone(),
+            account_id.clone(),
             "api.tradier.com".into(),
             persistence.clone(),
         )
