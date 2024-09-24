@@ -4,11 +4,7 @@ use std::{collections::HashMap, env};
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {
-    pub access_token: String,
-    pub sandbox_token: String,
-    pub account_id: String,
     pub sandbox: bool,
-    pub mongo_url: String,
     pub strategies: Vec<Strategy>,
     pub hist_data_range: i64,
     pub backtest_range: i64,
@@ -26,11 +22,7 @@ impl AppConfig {
 impl From<ConfigHolder> for AppConfig {
     fn from(holder: ConfigHolder) -> Self {
         AppConfig {
-            access_token: holder.access_token,
-            sandbox_token: holder.sandbox_token,
-            account_id: holder.account_id,
             sandbox: holder.sandbox,
-            mongo_url: holder.mongo_url,
             strategies: holder.strategies.into_iter().map(|s| s.into()).collect(),
             hist_data_range: holder.hist_data_range,
             backtest_range: holder.backtest_range,
@@ -64,11 +56,7 @@ impl From<StrategyHolder> for Strategy {
 
 #[derive(Deserialize)]
 struct ConfigHolder {
-    pub access_token: String,
-    pub sandbox_token: String,
-    pub account_id: String,
     pub sandbox: bool,
-    pub mongo_url: String,
     pub strategies: Vec<StrategyHolder>,
     pub hist_data_range: i64,
     pub backtest_range: i64,

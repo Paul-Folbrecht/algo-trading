@@ -10,6 +10,7 @@ use itertools::Itertools;
 use log::*;
 use log4rs;
 use services::historical_data;
+use std::env;
 
 mod backtest_historical_data;
 mod backtest_market_data_manager;
@@ -17,6 +18,8 @@ mod backtest_orders;
 mod backtest_service;
 
 fn main() {
+    let access_token = env::var("ACCESS_TOKEN").expect("ACCESS_TOKEN not found");
+
     log4rs::init_file("config/backtest-log4rs.yaml", Default::default()).unwrap();
     let config = AppConfig::new().expect("Could not load config");
     info!("Config:\n{:?}", config);
@@ -25,7 +28,7 @@ fn main() {
     let symbols = config.all_symbols();
 
     let historical_data = historical_data::new(
-        config.access_token.clone(),
+        access_token.clone(),
         symbols.clone(),
         config.backtest_range + config.hist_data_range,
         end,
@@ -39,7 +42,7 @@ fn main() {
     );
 
     let backtest_market_data_manager = backtest_market_data_manager::new(
-        config.access_token.clone(),
+        access_token.clone(),
         symbols.clone(),
         config.backtest_range,
         end,

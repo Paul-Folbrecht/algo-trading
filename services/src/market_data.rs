@@ -3,7 +3,6 @@ use domain::domain::Quote;
 use log::*;
 use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH};
 use serde::Deserialize;
-use std::collections::HashSet;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
@@ -22,7 +21,6 @@ pub trait MarketDataService {
 pub fn new(access_token: String) -> Arc<impl MarketDataService> {
     Arc::new(implementation::MarketData {
         access_token,
-        symbols: HashSet::new(),
         subscribers: Arc::new(Mutex::new(Vec::new())),
     })
 }
@@ -44,7 +42,6 @@ mod implementation {
 
     pub struct MarketData {
         pub access_token: String,
-        pub symbols: HashSet<String>,
         pub subscribers: Arc<Mutex<Vec<(Sender<Quote>, Receiver<Quote>)>>>,
     }
 

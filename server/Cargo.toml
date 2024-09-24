@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 app-config = { path = "../app_config" }
+openssl = { version = "0.10.66", features = ["vendored"] }
 services = { path = "../services" }
 chrono = "0.4.38"
 log = "0.4"
