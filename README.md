@@ -16,12 +16,8 @@ Example:
 
 ```
 sandbox = true
-access_token = "XXXX"
-sandbox_token = "XXXX"
-account_id = "XXXX"
 hist_data_range = 20
 backtest_range = 730
-mongo_url = "mongodb://localhost:27017/"
 
 [[strategies]]
 name = "mean-reversion"
@@ -64,6 +60,18 @@ In the shell, execute `use algo-trading` to use the database. Queries on collect
 
 Alternatively, you can use a MongoDB Atlas instance - just set `mongo_url` to an appropriate connection string.
 
+Note: A MongoDB Atlas connection string (MONGO_URL environment variable) should be of the form
+
+```
+mongodb://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
+```
+
+Example:
+
+```
+export MONGO_URL="mongodb+srv://{username}:{password}@cluster0.31ie7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+```
+
 ## Testing
 
 `cargo test` requires the environment variables `TRADIER_ACCESS_TOKEN`, `TRADIER_SANDBOX_TOKEN`, and `TRADIER_ACCOUNT_ID` to be set.
@@ -77,3 +85,23 @@ or
 `cargo run --bin backtest`
 
 Output will include generated realized P&L and open positions.
+
+## Docker
+
+To build the image:
+
+`docker build -t algo-trading .`
+
+To tag for GCP Registry:
+
+```
+docker tag \
+    algo-trading \
+    us-central1-docker.pkg.dev/{project-id}/{repo-name}/algo-trading
+```
+
+And to push:
+
+`
+docker image push us-central1-docker.pkg.dev/{project-id}/{repo-name}/algo-trading:latest
+`
