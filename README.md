@@ -16,12 +16,8 @@ Example:
 
 ```
 sandbox = true
-access_token = "XXXX"
-sandbox_token = "XXXX"
-account_id = "XXXX"
 hist_data_range = 20
 backtest_range = 730
-mongo_url = "mongodb://localhost:27017/"
 
 [[strategies]]
 name = "mean-reversion"
@@ -63,6 +59,18 @@ or
 In the shell, execute `use algo-trading` to use the database. Queries on collections positions, orders, and pnl can then be made.
 
 Alternatively, you can use a MongoDB Atlas instance - just set `mongo_url` to an appropriate connection string.
+
+Note: A MongoDB Atlas connection string (MONGO_URL environment variable) should be of the form
+
+```
+mongodb://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
+```
+
+Example:
+
+```
+export MONGO_URL="mongodb+srv://{username}:{password}@cluster0.31ie7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+```
 
 ## Testing
 
