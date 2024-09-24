@@ -77,3 +77,23 @@ or
 `cargo run --bin backtest`
 
 Output will include generated realized P&L and open positions.
+
+## Docker
+
+To build the image:
+
+`docker build -t algo-trading .`
+
+To tag for GCP Registry:
+
+```
+docker tag \
+    algo-trading \
+    us-central1-docker.pkg.dev/{project-id}/{repo-name}/algo-trading
+```
+
+And to push:
+
+`
+docker image push us-central1-docker.pkg.dev/{project-id}/{repo-name}/algo-trading:latest
+`
