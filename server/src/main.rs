@@ -19,8 +19,9 @@ use services::{historical_data, market_data, orders, trading};
 use services::{market_data::MarketDataService, persistence};
 
 fn main() {
-    log4rs::init_file("config/log4rs.yaml", Default::default()).unwrap();
-    let config = AppConfig::new().expect("Could not load config");
+    log4rs::init_file("config/log4rs.yaml", Default::default())
+        .expect("Failed to load log4rs config");
+    let config = AppConfig::new().expect("Failed to parse config");
     info!("Config:\n{:?}", config);
 
     let mut today = Local::now().naive_local().date();
@@ -28,8 +29,9 @@ fn main() {
 
     loop {
         thread::sleep(Duration::from_secs(300));
+        let now = Local::now().naive_local().date();
 
-        if Local::now().naive_local().date() > today {
+        if now > today {
             shutdown.store(true, std::sync::atomic::Ordering::Relaxed);
 
             handle
@@ -37,7 +39,7 @@ fn main() {
                 .expect("Failed to join MarketDataService thread");
             info!("All threads exited successfully");
 
-            today = Local::now().naive_local().date();
+            today = now;
             info!("Trading day ended - resetting for {}", today);
             (shutdown, handle) = init_for_new_day(today, config.clone());
         }

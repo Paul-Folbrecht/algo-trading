@@ -53,7 +53,7 @@ checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
 
 [[package]]
 name = "app-config"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "config",
  "serde",
@@ -313,7 +313,7 @@ dependencies = [
 
 [[package]]
 name = "backtest"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "app-config",
  "chrono",
@@ -546,7 +546,7 @@ dependencies = [
 
 [[package]]
 name = "core"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "backoff",
  "chrono",
@@ -756,7 +756,7 @@ dependencies = [
 
 [[package]]
 name = "domain"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "chrono",
  "core",
@@ -2439,7 +2439,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "app-config",
  "chrono",
