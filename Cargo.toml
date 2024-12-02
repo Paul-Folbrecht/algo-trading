@@ -2,7 +2,7 @@
 members = ["core", "domain", "services", "server", "backtest"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.9.0"
 authors = ["Paul Folbrecht <paul.folbrecht@gmail.com>"]
 edition = "2021"
 documentation = ""

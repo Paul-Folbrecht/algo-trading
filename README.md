@@ -88,9 +88,17 @@ Output will include generated realized P&L and open positions.
 
 ## Docker
 
-To build the image:
+To build the image for x86-64/AMD64, first run
 
-`docker build -t algo-trading .`
+`rustup target add x86_64-unknown-linux-gnu`
+
+then build with
+
+`docker build --platform=linux/amd64 -t algo-trading .`
+
+or
+
+`docker build --platform linux/x86-64 -t algo-trading .`
 
 To tag for GCP Registry:
 
